@@ -10,7 +10,7 @@ use crate::{ascii::NonNullAscii, error::WriteAsciiError, tinyascii::TinyAscii};
 
 // This impl should be on `type Target = [NonNullAscii]`, but
 // ASCII slice does not have the same support as `&str`.
-// Maybe when std has a stable `&[ascii]` type.
+// Maybe when std has a stable `&[core::ascii::Char]` type.
 impl<const N: usize> Deref for TinyAscii<N> {
     type Target = str;
 
@@ -136,6 +136,20 @@ impl<const N: usize> PartialEq<alloc::borrow::Cow<'_, str>> for TinyAscii<N> {
 impl<const N: usize> PartialEq<TinyAscii<N>> for alloc::borrow::Cow<'_, str> {
     fn eq(&self, other: &TinyAscii<N>) -> bool {
         self.as_ref().eq(other.as_str())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> PartialEq<alloc::string::String> for TinyAscii<N> {
+    fn eq(&self, other: &alloc::string::String) -> bool {
+        self.as_str().eq(other)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> PartialEq<TinyAscii<N>> for alloc::string::String {
+    fn eq(&self, other: &TinyAscii<N>) -> bool {
+        self.eq(other.as_str())
     }
 }
 

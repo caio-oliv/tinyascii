@@ -10,12 +10,12 @@ std = ["alloc"]
 
 [dependencies]
 
+[dev-dependencies]
 
 [lints.rust]
 # missing_docs = "warn"
 # rustdoc::missing_doc_code_examples = "warn"
 unsafe_op_in_unsafe_fn = "warn"
-unused_qualifications = "warn"
 
 [lints.clippy]
 manual_let_else = "warn"
