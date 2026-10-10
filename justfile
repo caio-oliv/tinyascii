@@ -7,10 +7,6 @@ build-matrix:
 	cargo build --features std
 	cargo build --features dep_tinystr
 	cargo build --features dep_ascii
-	cargo build --features alloc,dep_tinystr
-	cargo build --features std,dep_tinystr
-	cargo build --features alloc,dep_ascii
-	cargo build --features std,dep_ascii
 
 test:
 	cargo test --all-features

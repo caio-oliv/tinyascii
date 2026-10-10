@@ -5,6 +5,7 @@ extern crate alloc;
 
 mod ascii;
 mod ascii_impls;
+mod interop;
 mod tinyascii;
 mod tinyascii_impls;
 
@@ -12,12 +13,6 @@ pub mod error;
 
 pub use ascii::*;
 pub use tinyascii::*;
-
-#[cfg(feature = "dep_tinystr")]
-mod tinystr;
-
-#[cfg(feature = "dep_ascii")]
-mod dep_ascii;
 
 #[cfg(test)]
 mod ascii_tests;
