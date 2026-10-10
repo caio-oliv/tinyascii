@@ -13,8 +13,11 @@ pub mod error;
 pub use ascii::*;
 pub use tinyascii::*;
 
-#[cfg(feature = "tinystr")]
+#[cfg(feature = "dep_tinystr")]
 mod tinystr;
+
+#[cfg(feature = "dep_ascii")]
+mod dep_ascii;
 
 #[cfg(test)]
 mod ascii_tests;
