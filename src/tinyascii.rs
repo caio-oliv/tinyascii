@@ -360,7 +360,9 @@ impl<const N: usize> TinyAscii<N> {
 
         // SAFETY: `self.len()` is always less or equal to N, since N is the
         // total capacity.
-        unsafe { core::hint::assert_unchecked(len <= N) };
+        unsafe {
+            core::hint::assert_unchecked(len <= N);
+        }
 
         len
     }
@@ -619,15 +621,16 @@ impl<const N: usize> TinyAscii<N> {
 
         self.buf[N - 1] = encode_len(final_len);
 
-        // SAFETY: `buf + len` is within the array bounds.
-        let dst = unsafe { self.buf.as_mut_ptr().add(len) };
-
         // SAFETY:
         // - `ascii` is initialized with valid `NonNullAscii` bytes up to `ascii.len()`
         // - `self.buf` has available capacity >= `ascii.len()`
         // - `self.buf` and `ascii` do not overlap
         unsafe {
-            core::ptr::copy_nonoverlapping(ascii.as_ptr().cast(), dst, ascii.len());
+            core::ptr::copy_nonoverlapping(
+                ascii.as_ptr().cast(),
+                self.buf.as_mut_ptr().add(len),
+                ascii.len(),
+            );
         }
 
         Ok(())
@@ -737,14 +740,17 @@ impl<const N: usize> TinyAscii<N> {
 
         self.buf[N - 1] = encode_len(final_len);
 
-        // SAFETY: `buf + len` is within the array bounds.
-        let dst = unsafe { self.buf.as_mut_ptr().add(len) };
-
         // SAFETY:
         // - `bytes` is initialized with valid `NonNullAscii` values
         // - `self.buf` can be written up to `bytes.len()`
         // - `bytes` and `self.buf` do not overlap
-        unsafe { core::ptr::copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len()) };
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                bytes.as_ptr(),
+                self.buf.as_mut_ptr().add(len),
+                bytes.len(),
+            );
+        }
 
         Ok(())
     }
@@ -904,15 +910,17 @@ impl<const N: usize> TinyAscii<N> {
             return Err(InsertAsciiError::IndexOutOfBounds);
         }
 
-        // SAFETY: `buf` is valid for reads from `idx` up to `len - idx`.
-        let src = unsafe { self.buf.as_ptr().add(idx) };
-        // SAFETY: `buf` is valid for writes from `idx + 1` up to `len - idx`.
-        let dst = unsafe { self.buf.as_mut_ptr().add(idx + 1) };
         // SAFETY: Move the bytes starting from `idx` to their new location 1 byte
         // ahead. This is safe because sufficient capacity is ensured by checks
         // above.
         unsafe {
-            core::ptr::copy(src, dst, len - idx);
+            core::ptr::copy(
+                // `buf` is valid for reads from `idx` up to `len - idx`.
+                self.buf.as_ptr().add(idx),
+                // `buf` is valid for writes from `idx + 1` up to `len - idx`.
+                self.buf.as_mut_ptr().add(idx + 1),
+                len - idx,
+            );
         }
 
         self.buf[idx] = ascii.to_u8();
@@ -983,24 +991,26 @@ impl<const N: usize> TinyAscii<N> {
             return Err(InsertAsciiError::IndexOutOfBounds);
         }
 
-        {
-            // SAFETY: `buf` is valid for reads from `idx` up to `len - idx`.
-            let src = unsafe { self.buf.as_ptr().add(idx) };
-            // SAFETY: `buf` is valid for writes from `idx + ascii.len()` up to `len - idx`.
-            let dst = unsafe { self.buf.as_mut_ptr().add(idx + ascii.len()) };
-            // SAFETY: Move the bytes starting from `idx` to their new location `ascii.len()` bytes
-            // ahead. This is safe because sufficient capacity is ensured.
-            unsafe {
-                core::ptr::copy(src, dst, len - idx);
-            }
+        // SAFETY: Move the bytes starting from `idx` to their new location `ascii.len()` bytes
+        // ahead. This is safe because sufficient capacity is ensured.
+        unsafe {
+            core::ptr::copy(
+                // `buf` is valid for reads from `idx` up to `len - idx`.
+                self.buf.as_ptr().add(idx),
+                // `buf` is valid for writes from `idx + ascii.len()` up to `len - idx`.
+                self.buf.as_mut_ptr().add(idx + ascii.len()),
+                len - idx,
+            );
         }
 
-        // SAFETY: `buf` is valid for writes from `idx` up to `len - idx`.
-        let dst = unsafe { self.buf.as_mut_ptr().add(idx) };
         // SAFETY: Copy the new slice into the vacated region if `idx != len`,
         // or into the spare capacity otherwise.
         unsafe {
-            core::ptr::copy_nonoverlapping(ascii.as_ptr().cast(), dst, ascii.len());
+            core::ptr::copy_nonoverlapping(
+                ascii.as_ptr().cast(),
+                self.buf.as_mut_ptr().add(idx),
+                ascii.len(),
+            );
         }
 
         self.buf[N - 1] = encode_len(new_len);
@@ -1085,13 +1095,6 @@ impl<const N: usize> TinyAscii<N> {
         self.buf[N - 1] = encode_len(len + count);
 
         // SAFETY:
-        // - `range.start` index in a filled range in `self.buf`
-        let source = unsafe { self.buf.as_ptr().add(range.start) };
-        // SAFETY:
-        // - `range.end` index at the start of the unfilled range in `self.buf`
-        let dst = unsafe { self.buf.as_mut_ptr().add(len) };
-
-        // SAFETY:
         // - Both pointers are offset by `range.start` and `len` and, as checked
         // above, both memory regions do not overlap.
         // - `count` is less or equal to the len of `source`, so source
@@ -1099,7 +1102,11 @@ impl<const N: usize> TinyAscii<N> {
         // - `count <= self.available_capacity()` guarantees that `dst.len() >= count`
         // so `dst` is valid for `count` writes
         unsafe {
-            core::ptr::copy_nonoverlapping(source, dst, count);
+            core::ptr::copy_nonoverlapping(
+                self.buf.as_ptr().add(range.start),
+                self.buf.as_mut_ptr().add(len),
+                count,
+            );
         }
 
         Ok(())
@@ -1192,21 +1199,18 @@ impl<const N: usize> TinyAscii<N> {
         // Ajust post range data to its final place.
         let ajust_count = len - arange.end;
         if range_len != replace_with.len() && ajust_count != 0 {
-            // SAFETY: `arange.end < len`, so it is within bounds of `self.buf`
-            let src = unsafe { self.buf.as_ptr().add(arange.end) };
-            // SAFETY: `arange.start + replace_with.len()` is `< self.buf.len` given the checks
-            // above, so it is within bounds of `self.buf`
-            let dst = unsafe { self.buf.as_mut_ptr().add(arange.start + replace_with.len()) };
             // SAFETY:
             // - `src` can be read up to `ajust_count`, as `ajust_count` is `len - arange.end`
             // - `dst` can be written up to `ajust_count`
             unsafe {
-                core::ptr::copy(src, dst, ajust_count);
+                core::ptr::copy(
+                    self.buf.as_ptr().add(arange.end),
+                    self.buf.as_mut_ptr().add(arange.start + replace_with.len()),
+                    ajust_count,
+                );
             }
         }
 
-        // SAFETY: `arange.start` is at the start of the replacement section.
-        let dst = unsafe { self.buf.as_mut_ptr().add(arange.start) };
         // SAFETY:
         // - `dst` can be written up to `replace_with.len()` as checked above.
         // - `replace_with.as_ptr()` is a valid shared reference valid for
@@ -1216,7 +1220,7 @@ impl<const N: usize> TinyAscii<N> {
         unsafe {
             core::ptr::copy_nonoverlapping(
                 replace_with.as_ptr().cast::<u8>(),
-                dst,
+                self.buf.as_mut_ptr().add(arange.start),
                 replace_with.len(),
             );
         }
@@ -1282,18 +1286,15 @@ impl<const N: usize> TinyAscii<N> {
 
         self.buf[N - 1] = encode_len(len - range_len);
 
-        // SAFETY: `arange.end < len`, so it is within bounds of `self.buf`
-        let src = unsafe { self.buf.as_ptr().add(arange.end) };
-
-        // SAFETY: `arange.start < self.buf.len` ensure by the checks
-        // above, so it is within bounds of `self.buf`
-        let dst = unsafe { self.buf.as_mut_ptr().add(arange.start) };
-
         // SAFETY:
         // - `src` can be read up to `len - arange.end`
         // - `dst` can be written up to `len - arange.end`
         unsafe {
-            core::ptr::copy(src, dst, len - arange.end);
+            core::ptr::copy(
+                self.buf.as_ptr().add(arange.end),
+                self.buf.as_mut_ptr().add(arange.start),
+                len - arange.end,
+            );
         }
 
         Ok(())
@@ -1345,18 +1346,15 @@ impl<const N: usize> TinyAscii<N> {
         let ascii = self.buf[idx];
         self.buf[N - 1] = encode_len(len - 1);
 
-        // SAFETY: `arange.end < len`, so it is within bounds of `self.buf`
-        let src = unsafe { self.buf.as_ptr().add(idx + 1) };
-
-        // SAFETY: `arange.start < self.buf.len` ensure by the checks
-        // above, so it is within bounds of `self.buf`
-        let dst = unsafe { self.buf.as_mut_ptr().add(idx) };
-
         // SAFETY:
         // - `src` can be read up to `len - idx`
         // - `dst` can be written up to `len - idx`
         unsafe {
-            core::ptr::copy(src, dst, len - idx);
+            core::ptr::copy(
+                self.buf.as_ptr().add(idx + 1),
+                self.buf.as_mut_ptr().add(idx),
+                len - idx,
+            );
         }
 
         // SAFETY: `ascii` is a valid non-null ASCII

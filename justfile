@@ -1,6 +1,11 @@
 default:
 	@just --list
 
+build-matrix:
+	cargo build --no-default-features
+	cargo build --features alloc
+	cargo build --features std
+
 test:
 	cargo test --all-features
 
