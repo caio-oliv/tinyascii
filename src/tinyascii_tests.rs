@@ -2,7 +2,7 @@
 #![allow(clippy::undocumented_unsafe_blocks)]
 
 use crate::{
-    NonNullAscii,
+    NonNullAscii, TinyAscii32,
     tinyascii::{TinyAscii4, TinyAscii8, TinyAscii16, TinyAscii128},
 };
 
@@ -876,4 +876,19 @@ mod alloc_tests {
         let cow: Cow<str> = s.as_str().into();
         assert_eq!(cow, "");
     }
+}
+
+// ---------------------------------------------------------------------------
+// Methods: remove
+// ---------------------------------------------------------------------------
+
+#[test]
+fn remove_index_at_length_boundary() {
+    let mut s = TinyAscii32::from_ascii_array([NonNullAscii::CapitalA; 32]);
+
+    for _ in 0..32 {
+        let _ = s.remove(2);
+    }
+
+    assert_eq!(s.len(), 2);
 }

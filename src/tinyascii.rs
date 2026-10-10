@@ -1343,19 +1343,22 @@ impl<const N: usize> TinyAscii<N> {
             return None;
         }
 
-        let ascii = self.buf[idx];
-        self.buf[N - 1] = encode_len(len - 1);
+        // SAFETY: Shift bytes from `idx..` to `idx - 1`
+        // - all pointers come from the same `self.buf`
+        // - `self.buf` is valid for reads and writes.
+        let ascii = unsafe {
+            let ptr_idx = self.buf.as_mut_ptr().add(idx);
 
-        // SAFETY:
-        // - `src` can be read up to `len - idx`
-        // - `dst` can be written up to `len - idx`
-        unsafe {
-            core::ptr::copy(
-                self.buf.as_ptr().add(idx + 1),
-                self.buf.as_mut_ptr().add(idx),
-                len - idx,
-            );
-        }
+            // copy it out, unsafely having a copy of the value on
+            // the stack and in the vector at the same time.
+            let byte = core::ptr::read(ptr_idx);
+
+            // Shift everything down to fill in that spot.
+            core::ptr::copy(ptr_idx.add(1), ptr_idx, len - idx - 1);
+            byte
+        };
+
+        self.buf[N - 1] = encode_len(len - 1);
 
         // SAFETY: `ascii` is a valid non-null ASCII
         Some(unsafe { NonNullAscii::from_u8_unchecked(ascii) })
