@@ -5,6 +5,9 @@ build-matrix:
 	cargo build --no-default-features
 	cargo build --features alloc
 	cargo build --features std
+	cargo build --features tinystr
+	cargo build --features alloc,tinystr
+	cargo build --features std,tinystr
 
 test:
 	cargo test --all-features
