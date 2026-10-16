@@ -246,6 +246,6 @@ impl<const N: usize> From<TinyAscii<N>> for [u8; N] {
 
 impl<const N: usize> Hash for TinyAscii<N> {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        self.as_bytes().hash(state);
+        self.as_str().hash(state);
     }
 }

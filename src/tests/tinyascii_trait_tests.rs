@@ -2,7 +2,7 @@
 #![allow(clippy::undocumented_unsafe_blocks)]
 
 use crate::{
-    NonNullAscii, TinyAscii32,
+    NonNullAscii, TinyAscii32, TinyAscii64,
     tinyascii::{TinyAscii4, TinyAscii8, TinyAscii16, TinyAscii128},
 };
 
@@ -592,6 +592,56 @@ fn into_parts_preserves_capacity() {
 }
 
 // ---------------------------------------------------------------------------
+// Clone
+// ---------------------------------------------------------------------------
+
+#[test]
+fn clone_preserves_content() {
+    let s: TinyAscii8 = TinyAscii8::try_new("clone me").unwrap();
+    let cloned = s.clone();
+    assert_eq!(&*cloned, "clone me");
+    assert_eq!(cloned.capacity(), 8);
+}
+
+#[test]
+fn clone_empty() {
+    let s: TinyAscii4 = TinyAscii4::empty();
+    let cloned = s.clone();
+    assert!(cloned.is_empty());
+    assert_eq!(cloned.capacity(), 4);
+}
+
+#[test]
+fn clone_is_deep_copy() {
+    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let mut cloned = s.clone();
+    cloned.try_push_u8(b'x').unwrap();
+    assert_eq!(&*s, "abc");
+    assert_eq!(&*cloned, "abcx");
+}
+
+// ---------------------------------------------------------------------------
+// Default
+// ---------------------------------------------------------------------------
+
+#[test]
+fn default_is_empty_for_all_sizes() {
+    let s4: TinyAscii4 = Default::default();
+    let s8: TinyAscii8 = Default::default();
+    let s16: TinyAscii16 = Default::default();
+    let s32: TinyAscii32 = Default::default();
+    let s64: TinyAscii64 = Default::default();
+    let s128: TinyAscii128 = Default::default();
+
+    assert!(s4.is_empty());
+    assert!(s8.is_empty());
+    assert!(s16.is_empty());
+    assert!(s32.is_empty());
+    assert!(s64.is_empty());
+    assert!(s128.is_empty());
+}
+
+// ---------------------------------------------------------------------------
 // Hash
 // ---------------------------------------------------------------------------
 
@@ -705,7 +755,7 @@ fn ord_max_len_vs_shorter() {
 }
 
 // ---------------------------------------------------------------------------
-// Std feature: AsRef<Path>, AsRef<OsStr>, PartialEq<Path/PathBuf/OsStr>
+// std feature: AsRef<Path>, AsRef<OsStr>, PartialEq<Path/PathBuf/OsStr>
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "std")]
@@ -793,10 +843,70 @@ mod std_tests {
         let os = std::ffi::OsStr::new("hello");
         assert_eq!(os, &*s);
     }
+
+    // ---------------------------------------------------------------------------
+    // Borrow pattern in collections
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn tinyascii_in_hashmap() {
+        use std::collections::HashMap;
+
+        let mut map = HashMap::<TinyAscii8, i32>::new();
+        let key = TinyAscii8::try_new("aaa").unwrap();
+        map.insert(key, 17);
+
+        assert_eq!(map.get("aaa"), Some(&17));
+        assert_eq!(map.get(&TinyAscii8::try_new("aaa").unwrap()), Some(&17));
+    }
+
+    #[test]
+    fn tinyascii_in_hashset() {
+        use std::collections::HashSet;
+
+        let mut set = HashSet::<TinyAscii8>::new();
+        set.insert(TinyAscii8::try_new("a").unwrap());
+        set.insert(TinyAscii8::try_new("b").unwrap());
+
+        assert!(set.contains("a"));
+        assert!(set.contains("b"));
+        assert!(!set.contains("c"));
+    }
+
+    #[test]
+    fn tinyascii_in_btree_map() {
+        use alloc::collections::BTreeMap;
+
+        let mut map = BTreeMap::<TinyAscii8, &str>::new();
+        map.insert(TinyAscii8::try_new("c").unwrap(), "third");
+        map.insert(TinyAscii8::try_new("a").unwrap(), "first");
+        map.insert(TinyAscii8::try_new("b").unwrap(), "second");
+
+        assert_eq!(map.get("a"), Some(&"first"));
+        assert_eq!(map.get("b"), Some(&"second"));
+        assert_eq!(map.get("c"), Some(&"third"));
+
+        // Iterate in order
+        let keys: Vec<&str> = map.keys().map(core::convert::AsRef::as_ref).collect();
+        assert_eq!(keys, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn tinyascii_in_btree_set() {
+        use alloc::collections::BTreeSet;
+
+        let mut set = BTreeSet::<TinyAscii8>::new();
+        set.insert(TinyAscii8::try_new("c").unwrap());
+        set.insert(TinyAscii8::try_new("a").unwrap());
+        set.insert(TinyAscii8::try_new("b").unwrap());
+
+        let items: Vec<&str> = set.iter().map(core::convert::AsRef::as_ref).collect();
+        assert_eq!(items, vec!["a", "b", "c"]);
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Std feature: alloc tests
+// alloc feature: alloc tests
 // ---------------------------------------------------------------------------
 #[cfg(feature = "alloc")]
 mod alloc_tests {
@@ -876,19 +986,4 @@ mod alloc_tests {
         let cow: Cow<str> = s.as_str().into();
         assert_eq!(cow, "");
     }
-}
-
-// ---------------------------------------------------------------------------
-// Methods: remove
-// ---------------------------------------------------------------------------
-
-#[test]
-fn remove_index_at_length_boundary() {
-    let mut s = TinyAscii32::from_ascii_array([NonNullAscii::CapitalA; 32]);
-
-    for _ in 0..32 {
-        let _ = s.remove(2);
-    }
-
-    assert_eq!(s.len(), 2);
 }

@@ -660,6 +660,199 @@ impl Ascii {
     pub const fn to_char(self) -> char {
         self as u8 as char
     }
+
+    /// Checks if the value is an alphabetic character:
+    ///
+    /// - 0x41 'A' ..= 0x5A 'Z', or
+    /// - 0x61 'a' ..= 0x7A 'z'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(uppercase_a.is_alphabetic());
+    /// assert!(uppercase_g.is_alphabetic());
+    /// assert!(a.is_alphabetic());
+    /// assert!(g.is_alphabetic());
+    /// assert!(!zero.is_alphabetic());
+    /// assert!(!percent.is_alphabetic());
+    /// assert!(!space.is_alphabetic());
+    /// assert!(!lf.is_alphabetic());
+    /// assert!(!esc.is_alphabetic());
+    /// ```
+    pub const fn is_alphabetic(self) -> bool {
+        self.to_u8().is_ascii_alphabetic()
+    }
+
+    /// Checks if the value is an alphanumeric character:
+    ///
+    /// - 0x41 'A' ..= 0x5A 'Z', or
+    /// - 0x61 'a' ..= 0x7A 'z', or
+    /// - 0x30 '0' ..= 0x39 '9'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(uppercase_a.is_alphanumeric());
+    /// assert!(uppercase_g.is_alphanumeric());
+    /// assert!(a.is_alphanumeric());
+    /// assert!(g.is_alphanumeric());
+    /// assert!(zero.is_alphanumeric());
+    /// assert!(!percent.is_alphanumeric());
+    /// assert!(!space.is_alphanumeric());
+    /// assert!(!lf.is_alphanumeric());
+    /// assert!(!esc.is_alphanumeric());
+    /// ```
+    pub const fn is_alphanumeric(self) -> bool {
+        self.to_u8().is_ascii_alphanumeric()
+    }
+
+    /// Checks if the value is a control character:
+    /// 0x00 NUL ..= 0x1F UNIT SEPARATOR, or 0x7F DELETE.
+    /// Note that most whitespace characters are control
+    /// characters, but SPACE is not.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(!uppercase_a.is_control());
+    /// assert!(!uppercase_g.is_control());
+    /// assert!(!a.is_control());
+    /// assert!(!g.is_control());
+    /// assert!(!zero.is_control());
+    /// assert!(!percent.is_control());
+    /// assert!(!space.is_control());
+    /// assert!(lf.is_control());
+    /// assert!(esc.is_control());
+    /// ```
+    pub const fn is_control(self) -> bool {
+        self.to_u8().is_ascii_control()
+    }
+
+    /// Checks if the value is a decimal digit:
+    /// 0x30 '0' ..= 0x39 '9'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(!uppercase_a.is_digit());
+    /// assert!(!uppercase_g.is_digit());
+    /// assert!(!a.is_digit());
+    /// assert!(!g.is_digit());
+    /// assert!(zero.is_digit());
+    /// assert!(!percent.is_digit());
+    /// assert!(!space.is_digit());
+    /// assert!(!lf.is_digit());
+    /// assert!(!esc.is_digit());
+    /// ```
+    pub const fn is_digit(self) -> bool {
+        self.to_u8().is_ascii_digit()
+    }
+
+    /// Checks if the value is a lowercase character:
+    /// 0x61 'a' ..= 0x7A 'z'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(!uppercase_a.is_lowercase());
+    /// assert!(!uppercase_g.is_lowercase());
+    /// assert!(a.is_lowercase());
+    /// assert!(g.is_lowercase());
+    /// assert!(!zero.is_lowercase());
+    /// assert!(!percent.is_lowercase());
+    /// assert!(!space.is_lowercase());
+    /// assert!(!lf.is_lowercase());
+    /// assert!(!esc.is_lowercase());
+    /// ```
+    pub const fn is_lowercase(self) -> bool {
+        self.to_u8().is_ascii_lowercase()
+    }
+
+    /// Checks if the value is an uppercase character:
+    /// 0x41 'A' ..= 0x5A 'Z'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(uppercase_a.is_uppercase());
+    /// assert!(uppercase_g.is_uppercase());
+    /// assert!(!a.is_uppercase());
+    /// assert!(!g.is_uppercase());
+    /// assert!(!zero.is_uppercase());
+    /// assert!(!percent.is_uppercase());
+    /// assert!(!space.is_uppercase());
+    /// assert!(!lf.is_uppercase());
+    /// assert!(!esc.is_uppercase());
+    /// ```
+    pub const fn is_uppercase(self) -> bool {
+        self.to_u8().is_ascii_uppercase()
+    }
 }
 
 impl NonNullAscii {
@@ -780,5 +973,198 @@ impl NonNullAscii {
         // SAFETY: `Ascii` is a super set of `NonNullAscii` with the
         // same representation.
         unsafe { core::mem::transmute::<Self, Ascii>(self) }
+    }
+
+    /// Checks if the value is an alphabetic character:
+    ///
+    /// - 0x41 'A' ..= 0x5A 'Z', or
+    /// - 0x61 'a' ..= 0x7A 'z'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(uppercase_a.is_alphabetic());
+    /// assert!(uppercase_g.is_alphabetic());
+    /// assert!(a.is_alphabetic());
+    /// assert!(g.is_alphabetic());
+    /// assert!(!zero.is_alphabetic());
+    /// assert!(!percent.is_alphabetic());
+    /// assert!(!space.is_alphabetic());
+    /// assert!(!lf.is_alphabetic());
+    /// assert!(!esc.is_alphabetic());
+    /// ```
+    pub const fn is_alphabetic(self) -> bool {
+        self.to_u8().is_ascii_alphabetic()
+    }
+
+    /// Checks if the value is an alphanumeric character:
+    ///
+    /// - 0x41 'A' ..= 0x5A 'Z', or
+    /// - 0x61 'a' ..= 0x7A 'z', or
+    /// - 0x30 '0' ..= 0x39 '9'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(uppercase_a.is_alphanumeric());
+    /// assert!(uppercase_g.is_alphanumeric());
+    /// assert!(a.is_alphanumeric());
+    /// assert!(g.is_alphanumeric());
+    /// assert!(zero.is_alphanumeric());
+    /// assert!(!percent.is_alphanumeric());
+    /// assert!(!space.is_alphanumeric());
+    /// assert!(!lf.is_alphanumeric());
+    /// assert!(!esc.is_alphanumeric());
+    /// ```
+    pub const fn is_alphanumeric(self) -> bool {
+        self.to_u8().is_ascii_alphanumeric()
+    }
+
+    /// Checks if the value is a control character:
+    /// 0x00 NUL ..= 0x1F UNIT SEPARATOR, or 0x7F DELETE.
+    /// Note that most whitespace characters are control
+    /// characters, but SPACE is not.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(!uppercase_a.is_control());
+    /// assert!(!uppercase_g.is_control());
+    /// assert!(!a.is_control());
+    /// assert!(!g.is_control());
+    /// assert!(!zero.is_control());
+    /// assert!(!percent.is_control());
+    /// assert!(!space.is_control());
+    /// assert!(lf.is_control());
+    /// assert!(esc.is_control());
+    /// ```
+    pub const fn is_control(self) -> bool {
+        self.to_u8().is_ascii_control()
+    }
+
+    /// Checks if the value is a decimal digit:
+    /// 0x30 '0' ..= 0x39 '9'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(!uppercase_a.is_digit());
+    /// assert!(!uppercase_g.is_digit());
+    /// assert!(!a.is_digit());
+    /// assert!(!g.is_digit());
+    /// assert!(zero.is_digit());
+    /// assert!(!percent.is_digit());
+    /// assert!(!space.is_digit());
+    /// assert!(!lf.is_digit());
+    /// assert!(!esc.is_digit());
+    /// ```
+    pub const fn is_digit(self) -> bool {
+        self.to_u8().is_ascii_digit()
+    }
+
+    /// Checks if the value is a lowercase character:
+    /// 0x61 'a' ..= 0x7A 'z'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(!uppercase_a.is_lowercase());
+    /// assert!(!uppercase_g.is_lowercase());
+    /// assert!(a.is_lowercase());
+    /// assert!(g.is_lowercase());
+    /// assert!(!zero.is_lowercase());
+    /// assert!(!percent.is_lowercase());
+    /// assert!(!space.is_lowercase());
+    /// assert!(!lf.is_lowercase());
+    /// assert!(!esc.is_lowercase());
+    /// ```
+    pub const fn is_lowercase(self) -> bool {
+        self.to_u8().is_ascii_lowercase()
+    }
+
+    /// Checks if the value is an uppercase character:
+    /// 0x41 'A' ..= 0x5A 'Z'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// let uppercase_a = Ascii::CapitalA;
+    /// let uppercase_g = Ascii::CapitalG;
+    /// let a = Ascii::SmallA;
+    /// let g = Ascii::SmallG;
+    /// let zero = Ascii::Digit0;
+    /// let percent = Ascii::PercentSign;
+    /// let space = Ascii::Space;
+    /// let lf = Ascii::LineFeed;
+    /// let esc = Ascii::Escape;
+    ///
+    /// assert!(uppercase_a.is_uppercase());
+    /// assert!(uppercase_g.is_uppercase());
+    /// assert!(!a.is_uppercase());
+    /// assert!(!g.is_uppercase());
+    /// assert!(!zero.is_uppercase());
+    /// assert!(!percent.is_uppercase());
+    /// assert!(!space.is_uppercase());
+    /// assert!(!lf.is_uppercase());
+    /// assert!(!esc.is_uppercase());
+    /// ```
+    pub const fn is_uppercase(self) -> bool {
+        self.to_u8().is_ascii_uppercase()
     }
 }

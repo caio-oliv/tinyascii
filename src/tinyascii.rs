@@ -398,7 +398,7 @@ impl<const N: usize> TinyAscii<N> {
     /// ```
     #[inline(always)]
     pub const fn is_empty(&self) -> bool {
-        self.buf[0] == 0
+        self.len() == 0
     }
 
     /// Returns `true` if this [`TinyAscii`] capacity is filled, and `false` otherwise.

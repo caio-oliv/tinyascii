@@ -15,7 +15,4 @@ pub use ascii::*;
 pub use tinyascii::*;
 
 #[cfg(test)]
-mod ascii_tests;
-
-#[cfg(test)]
-mod tinyascii_tests;
+mod tests;
