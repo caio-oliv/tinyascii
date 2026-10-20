@@ -4,6 +4,7 @@
 
 use proptest::prelude::*;
 
+use proptest::sample::SizeRange;
 use tinyascii::error::{
     CapacityLimitError, InsertAsciiError, InsertRangeError, RemoveRangeError, WriteAsciiError,
 };
@@ -15,10 +16,14 @@ fn non_null_ascii_strategy() -> impl Strategy<Value = NonNullAscii> {
     (1u8..128).prop_map(|b| NonNullAscii::from_u8(b).unwrap())
 }
 
+fn ascii_string(len: impl Into<SizeRange>) -> impl Strategy<Value = String> {
+    prop::collection::vec(1u8..=127u8, len).prop_map(|b| unsafe { String::from_utf8_unchecked(b) })
+}
+
 proptest! {
     #[test]
     fn try_new_parse_invalid_ascii(
-        mut s in prop::collection::vec(1u8..=127u8, 1..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        mut s in ascii_string(1..=128),
         invalid_idx in 0usize..128,
         invalid_byte in 128u8..=255,
     ) {
@@ -37,7 +42,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_new_parse_invalid_capacity(
-        s in prop::collection::vec(1u8..=127u8, 129..=192).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(129..=192),
     ) {
         let result = TinyAscii128::try_new(&s);
 
@@ -48,7 +53,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_from_bytes_valid_eq_try_new(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
     ) {
         let from_bytes = TinyAscii128::try_from_bytes(s.as_bytes()).unwrap();
         let from_str = TinyAscii128::try_new(&s).unwrap();
@@ -106,7 +111,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_available_capacity(
-        mut s in prop::collection::vec(1u8..=127u8, 0..=127).prop_map(|b| String::from_utf8(b).unwrap()),
+        mut s in ascii_string(0..=127),
         ascii in non_null_ascii_strategy(),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
@@ -125,7 +130,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_no_capacity(
-        s in prop::collection::vec(1u8..=127u8, 128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(128),
         ascii in non_null_ascii_strategy(),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
@@ -141,7 +146,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_u8_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         byte in 0u8..=255u8,
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
@@ -164,8 +169,8 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_str_valid(
-        s in prop::collection::vec(1u8..=127u8, 0..=96).prop_map(|b| String::from_utf8(b).unwrap()),
-        append in prop::collection::vec(1u8..=127u8, 0..=32).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=96),
+        append in ascii_string(0..=32),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
 
@@ -180,7 +185,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_str_invalid_ascii(
-        s in prop::collection::vec(1u8..=127u8, 0..=96).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=96),
         mut append in ".{0,7}"
     ) {
         append.push('😀');
@@ -197,7 +202,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_bytes_valid_ascii(
-        s in prop::collection::vec(1u8..=127u8, 0..=64).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=64),
         bytes in prop::collection::vec(1u8..=127u8, 0..=64),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
@@ -213,7 +218,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_bytes_invalid(
-        s in prop::collection::vec(1u8..=127u8, 0..=64).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=64),
         mut bytes in prop::collection::vec(0u8..=255u8, 1..=64),
         invalid_idx in 0usize..64
     ) {
@@ -232,7 +237,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_lossy_replacement_usage(
-        s in prop::collection::vec(1u8..=127u8, 0..=96).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=96),
         bytes in prop::collection::vec(0u8..=255u8, 0..=32),
         replacement in non_null_ascii_strategy(),
     ) {
@@ -257,7 +262,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_push_slice_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         slice in prop::collection::vec(non_null_ascii_strategy(), 0..=128),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
@@ -279,7 +284,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_insert_valid_case(
-        s in prop::collection::vec(1u8..=127u8, 0..=127).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=127),
         idx in 0usize..=128,
         ascii in non_null_ascii_strategy()
     ) {
@@ -304,7 +309,7 @@ proptest! {
 proptest! {
     #[test]
     fn try_insert_slice_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         insert in prop::collection::vec(non_null_ascii_strategy(), 0..=128),
         idx in 0usize..=128,
     ) {
@@ -339,7 +344,7 @@ proptest! {
 proptest! {
     #[test]
     fn insert_then_remove_equivalence(
-        s in prop::collection::vec(1u8..=127u8, 0..=64).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=64),
         idx in 0usize..=128,
         ascii in non_null_ascii_strategy(),
     ) {
@@ -357,7 +362,7 @@ proptest! {
 proptest! {
     #[test]
     fn extend_from_within_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         start in 0usize..=128,
         end in 0usize..=128,
     ) {
@@ -381,7 +386,7 @@ proptest! {
 proptest! {
     #[test]
     fn replace_range_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         start in 0usize..=128,
         end in 0usize..=128,
         repl in prop::collection::vec(non_null_ascii_strategy(), 0..=128),
@@ -411,7 +416,7 @@ proptest! {
 proptest! {
     #[test]
     fn remove_range_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         start in 0usize..=128,
         end in 0usize..=128,
     ) {
@@ -435,7 +440,7 @@ proptest! {
 proptest! {
     #[test]
     fn remove_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         idx in 0usize..=128,
     ) {
         let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
@@ -459,7 +464,7 @@ proptest! {
 proptest! {
     #[test]
     fn pop_values(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         pop_count in 1usize..=128,
     ) {
         let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
@@ -479,7 +484,7 @@ proptest! {
 proptest! {
     #[test]
     fn pop_and_push_reversibility(
-        s in prop::collection::vec(1u8..=127u8, 1..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(1..=128),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
 
@@ -500,7 +505,7 @@ proptest! {
 proptest! {
     #[test]
     fn retain_valid_output(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         greater in non_null_ascii_strategy(),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
@@ -519,7 +524,7 @@ proptest! {
 proptest! {
     #[test]
     fn retain_all_false(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
     ) {
         let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
 
@@ -532,7 +537,7 @@ proptest! {
 proptest! {
     #[test]
     fn retain_all_true(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
     ) {
         let mut ta = TinyAscii128::try_new(&s).unwrap();
 
@@ -546,7 +551,7 @@ proptest! {
 proptest! {
     #[test]
     fn truncate_all_cases(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
         new_len in 0usize..256,
     ) {
         let true_len = new_len.min(s.len());
@@ -565,7 +570,7 @@ proptest! {
 proptest! {
     #[test]
     fn clear_then_fill_equivalence(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
     ) {
         let ta1 = TinyAscii128::try_new(&s).unwrap();
 
@@ -583,7 +588,7 @@ proptest! {
 proptest! {
     #[test]
     fn resize_preserves_input(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
     ) {
         let ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
 
@@ -616,7 +621,7 @@ proptest! {
 proptest! {
     #[test]
     fn into_parts_from_parts_roundtrip(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
     ) {
         let ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
         let (arr, len) = ta.into_parts();
@@ -629,7 +634,7 @@ proptest! {
 proptest! {
     #[test]
     fn from_parts_into_parts_roundtrip(
-        s in prop::collection::vec(1u8..=127u8, 0..=128).prop_map(|b| String::from_utf8(b).unwrap()),
+        s in ascii_string(0..=128),
     ) {
         let mut arr = [0u8; 128];
         arr[..s.len()].copy_from_slice(s.as_bytes());
