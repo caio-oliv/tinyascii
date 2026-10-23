@@ -17,3 +17,9 @@ test-cov:
 
 test-cov-open:
 	python -m http.server 9010 -d target/llvm-cov/html
+
+bench-open:
+	python -m http.server 9020 -d target/criterion
+
+bench-clear:
+	rm -rf target/criterion
