@@ -147,7 +147,7 @@ impl<const N: usize> TinyAscii<N> {
         let mut tiny = Self::empty();
         tiny.buf[N - 1] = encode_len(bytes.len());
 
-        // SAFETY: `bytes.len()` is less than `N` as verified above
+        // SAFETY: `bytes.len()` is less or equal to `N` as verified above
         if !unsafe { crate::simd::is_valid_tinyascii(bytes) } {
             return Err(WriteAsciiError::InvalidAscii);
         }
@@ -1158,15 +1158,15 @@ impl<const N: usize> TinyAscii<N> {
 
         let range_len = arange.end - arange.start;
 
-        if replace_with.len() as isize - range_len as isize > self.available_capacity() as isize {
+        if replace_with.len() > self.available_capacity() + range_len {
             return Err(InsertRangeError::Capacity(CapacityLimitError));
         }
 
         let new_len = len + replace_with.len() - range_len;
 
         // Adjust post-range data to its final place.
-        let ajust_count = len - arange.end;
-        if range_len != replace_with.len() && ajust_count != 0 {
+        let adjust_count = len - arange.end;
+        if range_len != replace_with.len() && adjust_count != 0 {
             // SAFETY:
             // - `src` can be read up to `ajust_count`, as `ajust_count` is `len - arange.end` and `len <= N`.
             // - `dst` can be written up to `ajust_count`, as `new_len <= N` was checked above.
@@ -1175,7 +1175,7 @@ impl<const N: usize> TinyAscii<N> {
                 core::ptr::copy(
                     self.buf.as_ptr().add(arange.end),
                     self.buf.as_mut_ptr().add(arange.start + replace_with.len()),
-                    ajust_count,
+                    adjust_count,
                 );
             }
         }
@@ -1310,7 +1310,7 @@ impl<const N: usize> TinyAscii<N> {
     /// ```
     pub const fn remove(&mut self, idx: usize) -> Option<NonNullAscii> {
         let len = self.len();
-        if len == 0 || idx >= len {
+        if idx >= len {
             return None;
         }
 

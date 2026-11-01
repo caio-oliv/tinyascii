@@ -7,6 +7,7 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 
 use crate::ascii::NonNullAscii;
+use crate::simd::shared;
 use crate::tinyascii::MAX_LEN;
 
 /// Mask with all bits set in lanes holding an invalid byte (NUL or > 127).
@@ -23,12 +24,6 @@ fn invalid_mask_256(v: __m256i) -> __m256i {
 #[target_feature(enable = "avx2")]
 fn invalid_mask_128(v: __m128i) -> __m128i {
     _mm_cmpgt_epi8(_mm_set1_epi8(1), v)
-}
-
-/// Whether a single byte is valid `TinyAscii` content.
-#[inline(always)]
-const fn is_valid_byte(b: u8) -> bool {
-    b.wrapping_sub(1) < 127
 }
 
 /// AVX2 version of [`crate::simd::is_valid_tinyascii`].
@@ -92,15 +87,14 @@ pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
         return _mm_testz_si128(m, m) != 0;
     }
 
+    let mut acc = 1u8;
     for idx in 0..len {
         // SAFETY: `src` is within len bounds (`len = src.len()`).
         let b = *unsafe { src.get_unchecked(idx) };
-        if !is_valid_byte(b) {
-            return false;
-        }
+        acc &= shared::is_valid_byte(b) as u8;
     }
 
-    true
+    acc != 0
 }
 
 /// AVX2 version of [`crate::simd::fill_ascii`].
@@ -188,7 +182,7 @@ pub(super) unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNull
     for idx in 0..len {
         // SAFETY: `src` is within len bounds (`len = src.len()`).
         let b = *unsafe { src.get_unchecked(idx) };
-        let val = if is_valid_byte(b) { b } else { repl };
+        let val = if shared::is_valid_byte(b) { b } else { repl };
         // SAFETY: `dst` is within `src.len()` bounds.
         *unsafe { dst.get_unchecked_mut(idx) } = val;
     }

@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 use crate::ascii::NonNullAscii;
+use crate::simd::shared;
 use crate::tinyascii::MAX_LEN;
 
 /// Scalar version of [`crate::simd::is_valid_tinyascii`].
@@ -14,7 +15,12 @@ pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
     // by the caller.s
     unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
 
-    src.iter().copied().all(|b| b != 0 && b < 128)
+    let mut acc = 1u8;
+    for &b in src {
+        acc &= shared::is_valid_byte(b) as u8;
+    }
+
+    acc != 0
 }
 
 /// Scalar version of [`crate::simd::fill_ascii`].
@@ -33,10 +39,10 @@ pub(super) unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNull
     unsafe { core::hint::assert_unchecked(dst.len() >= src.len()) };
 
     for (idx, byte) in src.iter().copied().enumerate() {
-        let val = if byte == 0 || byte > 127 {
-            replacement.to_u8()
-        } else {
+        let val = if shared::is_valid_byte(byte) {
             byte
+        } else {
+            replacement.to_u8()
         };
 
         // SAFETY: `idx` is withing bounds of `dst` slice

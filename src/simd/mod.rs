@@ -50,3 +50,11 @@ pub unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNullAscii) 
         }
     }
 }
+
+mod shared {
+    /// Whether a single byte is valid `TinyAscii` content.
+    #[inline(always)]
+    pub(super) const fn is_valid_byte(b: u8) -> bool {
+        b.wrapping_sub(1) < 127
+    }
+}

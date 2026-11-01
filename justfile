@@ -12,10 +12,11 @@ set default-list
 @test:
     cargo test --all-features "$@"
 
-[env("RUSTFLAGS", "-C target_feature=+avx2")]
 [group('test')]
+[positional-arguments]
+[env("RUSTFLAGS", "-C target_feature=+avx2")]
 @test-avx2:
-    @just test
+    @just test "$@"
 
 [group('test')]
 @test-cov:
