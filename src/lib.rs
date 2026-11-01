@@ -6,6 +6,7 @@ extern crate alloc;
 mod ascii;
 mod ascii_impls;
 mod interop;
+mod simd;
 mod tinyascii;
 mod tinyascii_impls;
 

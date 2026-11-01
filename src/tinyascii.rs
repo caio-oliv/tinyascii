@@ -44,53 +44,6 @@ const fn encode_len(len: usize) -> u8 {
     len.to_le_bytes()[0] | LEN_MASK
 }
 
-/// Validates [`TinyAscii`] valid content.
-///
-/// Returns a [`WriteAsciiError`] if the `src` input has bytes equal 0 or greater than 127.
-const fn validate_tinyascii(src: &[u8]) -> Result<(), WriteAsciiError> {
-    // TODO: optimize
-    let mut i = 0;
-    while i < src.len() {
-        let byte = src[i];
-
-        if byte == 0 || byte > 127 {
-            return Err(WriteAsciiError::InvalidAscii);
-        };
-
-        i += 1;
-    }
-
-    Ok(())
-}
-
-/// Fill destination (`dst`) with valid bytes from source (`src`) using
-/// a replacement character for invalid bytes in source.
-///
-/// # Safety
-///
-/// `dst` length must be greater or equal to `src` length (`dst.len() >= src.len()`).
-///
-/// Failing to uphold this invariant will cause a write out of bounds.
-const unsafe fn fill_non_null_ascii(dst: &mut [u8], src: &[u8], replacement: NonNullAscii) {
-    // SAFETY: `dst` length is greater or equal than `src` length
-    // as ensured by the caller.
-    unsafe { core::hint::assert_unchecked(dst.len() >= src.len()) };
-
-    // TODO: optimize
-    let mut i = 0;
-    while i < src.len() {
-        let byte = src[i];
-
-        dst[i] = if byte == 0 || byte > 127 {
-            replacement.to_u8()
-        } else {
-            byte
-        };
-
-        i += 1;
-    }
-}
-
 impl<const N: usize> TinyAscii<N> {
     /// Creates a new empty [`TinyAscii`].
     ///
@@ -143,7 +96,7 @@ impl<const N: usize> TinyAscii<N> {
     /// assert_eq!(err, WriteAsciiError::Capacity(CapacityLimitError));
     /// ```
     #[inline(always)]
-    pub const fn try_new(s: &str) -> Result<Self, WriteAsciiError> {
+    pub fn try_new(s: &str) -> Result<Self, WriteAsciiError> {
         const { assert_capacity::<N>() }
 
         Self::try_from_bytes(s.as_bytes())
@@ -184,7 +137,7 @@ impl<const N: usize> TinyAscii<N> {
     /// let err = TinyAscii8::try_from_bytes(&big).unwrap_err();
     /// assert_eq!(err, WriteAsciiError::Capacity(CapacityLimitError));
     /// ```
-    pub const fn try_from_bytes(bytes: &[u8]) -> Result<Self, WriteAsciiError> {
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, WriteAsciiError> {
         const { assert_capacity::<N>() }
 
         if bytes.len() > N {
@@ -194,8 +147,9 @@ impl<const N: usize> TinyAscii<N> {
         let mut tiny = Self::empty();
         tiny.buf[N - 1] = encode_len(bytes.len());
 
-        if let Err(err) = validate_tinyascii(bytes) {
-            return Err(err);
+        // SAFETY: `bytes.len()` is less than `N` as verified above
+        if !unsafe { crate::simd::is_valid_tinyascii(bytes) } {
+            return Err(WriteAsciiError::InvalidAscii);
         }
 
         // SAFETY:
@@ -249,7 +203,7 @@ impl<const N: usize> TinyAscii<N> {
     /// let err = TinyAscii8::from_ascii_lossy(&bytes, NonNullAscii::QuestionMark).unwrap_err();
     /// assert_eq!(err, CapacityLimitError);
     /// ```
-    pub const fn from_ascii_lossy(
+    pub fn from_ascii_lossy(
         bytes: &[u8],
         replacement: NonNullAscii,
     ) -> Result<Self, CapacityLimitError> {
@@ -264,7 +218,7 @@ impl<const N: usize> TinyAscii<N> {
 
         // SAFETY:
         // - `dst` length is greater than or equal `src` length
-        unsafe { fill_non_null_ascii(&mut tiny.buf, bytes, replacement) };
+        unsafe { crate::simd::fill_ascii(&mut tiny.buf, bytes, replacement) };
 
         Ok(tiny)
     }
@@ -730,7 +684,7 @@ impl<const N: usize> TinyAscii<N> {
     /// assert_eq!(err, WriteAsciiError::Capacity(CapacityLimitError));
     /// assert_eq!(&s, "hello");
     /// ```
-    pub const fn try_push_bytes(&mut self, bytes: &[u8]) -> Result<(), WriteAsciiError> {
+    pub fn try_push_bytes(&mut self, bytes: &[u8]) -> Result<(), WriteAsciiError> {
         if bytes.is_empty() {
             return Ok(());
         }
@@ -742,8 +696,9 @@ impl<const N: usize> TinyAscii<N> {
             return Err(WriteAsciiError::Capacity(CapacityLimitError));
         }
 
-        if let Err(err) = validate_tinyascii(bytes) {
-            return Err(err);
+        // SAFETY: `bytes.len()` is less than `N` as verified above
+        if !unsafe { crate::simd::is_valid_tinyascii(bytes) } {
+            return Err(WriteAsciiError::InvalidAscii);
         }
 
         self.buf[N - 1] = encode_len(final_len);
@@ -809,7 +764,7 @@ impl<const N: usize> TinyAscii<N> {
 
         // SAFETY:
         // - `dst` length is greater than or equal `src` length
-        unsafe { fill_non_null_ascii(&mut self.buf[len..], bytes, replacement) };
+        unsafe { crate::simd::fill_ascii(&mut self.buf[len..], bytes, replacement) };
 
         Ok(())
     }
@@ -853,7 +808,7 @@ impl<const N: usize> TinyAscii<N> {
     /// assert_eq!(err, WriteAsciiError::Capacity(CapacityLimitError));
     /// assert_eq!(&s, "full");
     /// ```
-    pub const fn try_push_str(&mut self, s: &str) -> Result<(), WriteAsciiError> {
+    pub fn try_push_str(&mut self, s: &str) -> Result<(), WriteAsciiError> {
         self.try_push_bytes(s.as_bytes())
     }
 
