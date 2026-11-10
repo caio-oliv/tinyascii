@@ -26,6 +26,30 @@ pub unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
     }
 }
 
+/// Check if `src` is valid [`TinyAscii`] content and copy to `dst`.
+///
+/// # Safety
+///
+/// - `src.len()` must be less than or equal 128 (`MAX_LEN`).
+/// - `dst` length must be greater or equal to `src` length (`dst.len() >= src.len()`).
+///
+/// Failing to uphold those invariants will cause a write out of bounds.
+#[inline]
+pub unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
+    cfg_select! {
+        target_feature = "avx2" => {
+            // SAFETY:
+            // 1. AVX2 version has same safety requirements as `self::copy_valid_tinyascii`
+            // 2. `copy_valid_tinyascii` requires target_feature avx2 enabled
+            unsafe { avx2::copy_valid_tinyascii(src, dst) }
+        }
+        _ => {
+            // SAFETY: scalar version has same safety requirements as `self::copy_valid_tinyascii`
+            unsafe { scalar::copy_valid_tinyascii(src, dst) }
+        }
+    }
+}
+
 /// Fill destination (`dst`) with valid bytes from source (`src`) using
 /// a replacement character for invalid bytes in source.
 ///
@@ -48,13 +72,5 @@ pub unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNullAscii) 
             // SAFETY: scalar version has same safety requirements as `self::fill_ascii`
             unsafe { scalar::fill_ascii(dst, src, replacement) }
         }
-    }
-}
-
-mod shared {
-    /// Whether a single byte is valid `TinyAscii` content.
-    #[inline(always)]
-    pub(super) const fn is_valid_byte(b: u8) -> bool {
-        b.wrapping_sub(1) < 127
     }
 }

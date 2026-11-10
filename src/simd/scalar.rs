@@ -1,7 +1,6 @@
 #![allow(unused)]
 
 use crate::ascii::NonNullAscii;
-use crate::simd::shared;
 use crate::tinyascii::MAX_LEN;
 
 /// Scalar version of [`crate::simd::is_valid_tinyascii`].
@@ -12,12 +11,36 @@ use crate::tinyascii::MAX_LEN;
 #[inline(always)]
 pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
     // SAFETY: `src` length is less or equal than `N` as ensured
-    // by the caller.s
+    // by the caller.
     unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
 
     let mut acc = 1u8;
     for &b in src {
-        acc &= shared::is_valid_byte(b) as u8;
+        acc &= NonNullAscii::is_valid_u8(b) as u8;
+    }
+
+    acc != 0
+}
+
+/// Scalar version of [`crate::simd::copy_valid_tinyascii`].
+///
+/// # Safety
+///
+/// Same sefety requirements as [`crate::simd::copy_valid_tinyascii`].
+#[inline(always)]
+pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
+    // SAFETY: `src` length is less or equal than `N` as ensured
+    // by the caller.
+    unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
+
+    // SAFETY: `dst` length is greater or equal than `src` length
+    // as ensured by the caller.
+    unsafe { core::hint::assert_unchecked(dst.len() >= src.len()) };
+
+    let mut acc = 1u8;
+    for (idx, b) in src.iter().copied().enumerate() {
+        acc &= NonNullAscii::is_valid_u8(b) as u8;
+        dst[idx] = b;
     }
 
     acc != 0
@@ -39,7 +62,7 @@ pub(super) unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNull
     unsafe { core::hint::assert_unchecked(dst.len() >= src.len()) };
 
     for (idx, byte) in src.iter().copied().enumerate() {
-        let val = if shared::is_valid_byte(byte) {
+        let val = if NonNullAscii::is_valid_u8(byte) {
             byte
         } else {
             replacement.to_u8()

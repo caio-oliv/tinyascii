@@ -147,17 +147,11 @@ impl<const N: usize> TinyAscii<N> {
         let mut tiny = Self::empty();
         tiny.buf[N - 1] = encode_len(bytes.len());
 
-        // SAFETY: `bytes.len()` is less or equal to `N` as verified above
-        if !unsafe { crate::simd::is_valid_tinyascii(bytes) } {
-            return Err(WriteAsciiError::InvalidAscii);
-        }
-
         // SAFETY:
-        // - `bytes` is initialized with valid `NonNullAscii` values
-        // - `tiny.buf` can be written up to `bytes.len()`
-        // - `bytes` and `tiny.buf` do not overlap
-        unsafe {
-            core::ptr::copy_nonoverlapping(bytes.as_ptr(), tiny.buf.as_mut_ptr(), bytes.len());
+        // - `bytes.len()` is less or equal to `N` as verified above
+        // - `tiny.buf` length is greater than or equal `bytes.len()`
+        if !unsafe { crate::simd::copy_valid_tinyascii(bytes, &mut tiny.buf) } {
+            return Err(WriteAsciiError::InvalidAscii);
         }
 
         Ok(tiny)
@@ -257,25 +251,24 @@ impl<const N: usize> TinyAscii<N> {
     pub const fn resize<const M: usize>(self) -> TinyAscii<M> {
         const { assert_capacity::<M>() }
 
-        let mut tiny = TinyAscii::<M>::empty();
-
-        let len = self.len();
-        let final_len = if len < M {
-            tiny.buf[M - 1] = encode_len(len);
-            len
-        } else {
-            M
-        };
+        let mut buf = [0u8; M];
+        // use `M.min(N)` when const stable
+        let cp_len = if N < M { N } else { M };
 
         // SAFETY:
         // - `self.buf` is initialized with valid `NonNullAscii` values up to `final_len`
         // - `tiny.buf` can be written up to `final_len`
         // - `self.buf` and `tiny.buf` do not overlap
         unsafe {
-            core::ptr::copy_nonoverlapping(self.buf.as_ptr(), tiny.buf.as_mut_ptr(), final_len);
+            core::ptr::copy_nonoverlapping(self.buf.as_ptr(), buf.as_mut_ptr(), cp_len);
         }
 
-        tiny
+        let len = self.len();
+        if len < M {
+            buf[M - 1] = encode_len(len);
+        }
+
+        TinyAscii { buf }
     }
 
     /// Returns this [`TinyAscii`]'s capacity, in bytes.
@@ -1429,8 +1422,12 @@ impl<const N: usize> TinyAscii<N> {
         };
 
         while guard.idx < len {
-            // SAFETY: `byte` is a valid `NonNullAscii`
-            let ascii = unsafe { NonNullAscii::from_u8_unchecked(guard.tiny.buf[guard.idx]) };
+            // SAFETY: `byte` is a valid `NonNullAscii` and `guard.idx` is
+            // within `tiny.buf` bounds
+            let ascii = unsafe {
+                let byte = *guard.tiny.buf.get_unchecked(guard.idx);
+                NonNullAscii::from_u8_unchecked(byte)
+            };
 
             if !f(ascii) {
                 guard.deleted += 1;

@@ -562,6 +562,20 @@ impl Ascii {
     /// Maximum [Ascii] value.
     pub const MAX: Ascii = Ascii::Delete;
 
+    /// Validate if [`u8`] is a valid [Ascii] character.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::Ascii;
+    /// assert!(Ascii::is_valid_u8(97));
+    /// assert!(Ascii::is_valid_u8(0));
+    /// assert!(!Ascii::is_valid_u8(193));
+    /// ```
+    pub const fn is_valid_u8(b: u8) -> bool {
+        b < 128
+    }
+
     /// Creates a [`Ascii`] character from a byte,
     /// or returns `None` if it's not ASCII.
     ///
@@ -574,7 +588,7 @@ impl Ascii {
     /// ```
     #[inline]
     pub const fn from_u8(b: u8) -> Option<Self> {
-        if b <= Self::MAX.to_u8() {
+        if Self::is_valid_u8(b) {
             // SAFETY: Just checked that `b` is in-range
             Some(unsafe { Self::from_u8_unchecked(b) })
         } else {
@@ -862,6 +876,20 @@ impl NonNullAscii {
     /// Maximum [NonNullAscii] value.
     pub const MAX: NonNullAscii = NonNullAscii::Delete;
 
+    /// Validate if [`u8`] is a valid [NonNullAscii] character.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::NonNullAscii;
+    /// assert!(NonNullAscii::is_valid_u8(97));
+    /// assert!(!NonNullAscii::is_valid_u8(0));
+    /// assert!(!NonNullAscii::is_valid_u8(193));
+    /// ```
+    pub const fn is_valid_u8(b: u8) -> bool {
+        b.wrapping_sub(1) < 127
+    }
+
     /// Creates [`NonNullAscii`] character from a byte,
     /// or returns `None` if it's too large.
     ///
@@ -874,7 +902,7 @@ impl NonNullAscii {
     /// ```
     #[inline]
     pub const fn from_u8(b: u8) -> Option<Self> {
-        if b != 0 && b <= Self::MAX.to_u8() {
+        if Self::is_valid_u8(b) {
             // SAFETY: Just checked that `b` is in-range
             Some(unsafe { Self::from_u8_unchecked(b) })
         } else {
