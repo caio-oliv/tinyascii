@@ -4,6 +4,7 @@
 //! benchmark ids (`<method>/<scenario>/<N>`) line up and can be compared directly.
 
 #![allow(unused)]
+#![allow(missing_docs)]
 #![allow(clippy::undocumented_unsafe_blocks)]
 
 use rand::{Rng, RngExt, SeedableRng, rngs::SmallRng};

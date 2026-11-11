@@ -1,5 +1,6 @@
 //! `TinyAscii` push and insert benchmarks.
 
+#![allow(missing_docs)]
 #![allow(clippy::undocumented_unsafe_blocks)]
 
 mod common;

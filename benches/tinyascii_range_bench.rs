@@ -1,4 +1,7 @@
 //! `TinyAscii` range benchmarks.
+
+#![allow(missing_docs)]
+
 mod common;
 
 use core::hint::black_box;

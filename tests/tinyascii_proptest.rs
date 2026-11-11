@@ -1,5 +1,5 @@
+#![allow(missing_docs)]
 #![allow(clippy::unwrap_used)]
-#![allow(clippy::as_conversions)]
 #![allow(clippy::undocumented_unsafe_blocks)]
 
 use proptest::prelude::*;
