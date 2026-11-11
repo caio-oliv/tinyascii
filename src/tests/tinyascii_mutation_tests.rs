@@ -792,3 +792,65 @@ fn retain_control_chars() {
     s.retain(|c| c != NonNullAscii::LineFeed);
     assert_eq!(&s, "a\x07bc");
 }
+
+// A panicking predicate must leave the string valid: retained prefix followed
+// by the unvisited tail (including the character that triggered the panic).
+
+fn retain_panicking<const N: usize>(
+    s: &mut TinyAscii<N>,
+    keep: fn(NonNullAscii) -> bool,
+    at: NonNullAscii,
+) {
+    let res = std::panic::catch_unwind(core::panic::AssertUnwindSafe(|| {
+        s.retain(|c| {
+            assert!(c != at, "predicate panic");
+            keep(c)
+        });
+    }));
+    assert!(res.is_err());
+}
+
+#[test]
+fn retain_panic_after_deletions() {
+    let mut s = TinyAscii16::try_new("a1b2c3d4").unwrap();
+    retain_panicking(&mut s, NonNullAscii::is_lowercase, NonNullAscii::SmallC);
+    assert_eq!(&s, "abc3d4");
+    assert_eq!(s.len(), 6);
+}
+
+#[test]
+fn retain_panic_after_deletions_full_buffer() {
+    // The last content byte must survive since it lives in the length marker slot.
+    let mut s = TinyAscii8::try_new("a1b2c3d4").unwrap();
+    assert!(s.is_full());
+    retain_panicking(&mut s, NonNullAscii::is_lowercase, NonNullAscii::SmallC);
+    assert_eq!(&s, "abc3d4");
+    assert_eq!(s.len(), 6);
+}
+
+#[test]
+fn retain_panic_before_any_deletion() {
+    let mut s = TinyAscii16::try_new("abcdef").unwrap();
+    retain_panicking(&mut s, |_| true, NonNullAscii::SmallD);
+    assert_eq!(&s, "abcdef");
+
+    let mut s = TinyAscii8::try_new("abcdefgh").unwrap();
+    retain_panicking(&mut s, NonNullAscii::is_lowercase, NonNullAscii::SmallD);
+    assert_eq!(&s, "abcdefgh");
+    assert!(s.is_full());
+}
+
+#[test]
+fn retain_panic_on_first_deleted_candidate() {
+    // Panic on the very first rejected character: nothing was removed yet.
+    let mut s = TinyAscii8::try_new("ab1cd").unwrap();
+    retain_panicking(&mut s, NonNullAscii::is_lowercase, NonNullAscii::Digit1);
+    assert_eq!(&s, "ab1cd");
+}
+
+#[test]
+fn retain_panic_on_last_char() {
+    let mut s = TinyAscii8::try_new("a1b2").unwrap();
+    retain_panicking(&mut s, NonNullAscii::is_lowercase, NonNullAscii::Digit2);
+    assert_eq!(&s, "ab2");
+}

@@ -1396,51 +1396,102 @@ impl<const N: usize> TinyAscii<N> {
     where
         F: FnMut(NonNullAscii) -> bool,
     {
-        struct SetLenOnDrop<'a, const N: usize> {
+        // Invariants while the guard is alive:
+        // - `buf[..idx - deleted]` holds the retained characters,
+        // - `buf[idx..original_len]` holds the not yet visited characters,
+        // - `buf[idx - deleted..idx]` is a gap of stale (already visited) bytes.
+        //
+        // The length marker (`buf[N - 1]`) is only written on drop, so when the
+        // string is full, the last content byte is intact while being visited.
+        struct BackshiftOnDrop<'a, const N: usize> {
             tiny: &'a mut TinyAscii<N>,
             idx: usize,
             deleted: usize,
+            original_len: usize,
         }
 
-        impl<'a, const N: usize> Drop for SetLenOnDrop<'a, N> {
+        impl<const N: usize> Drop for BackshiftOnDrop<'_, N> {
             fn drop(&mut self) {
-                let new_len = self.idx - self.deleted;
-                // SAFETY: after deleting characters, the `new_len` will always
-                // be less or equal than previous `tiny.len()`
-                unsafe { core::hint::assert_unchecked(new_len <= self.tiny.len()) };
-                if new_len != N {
-                    self.tiny.buf[N - 1] = encode_len(new_len);
+                if self.deleted == 0 {
+                    // Nothing changed, so the length marker is still valid.
+                    return;
                 }
+
+                // Move the unvisited tail over the gap. This also runs if the
+                // predicate panics, so no character is lost or duplicated.
+                //
+                // SAFETY:
+                // - `idx <= original_len <= N`, so the source is valid for
+                //   reads of `original_len - idx` bytes.
+                // - `deleted <= idx`, so the destination is within the buffer
+                //   and ends at `original_len - deleted <= N`.
+                // - `ptr::copy` supports overlapping ranges.
+                unsafe {
+                    let ptr = self.tiny.buf.as_mut_ptr();
+                    core::ptr::copy(
+                        ptr.add(self.idx),
+                        ptr.add(self.idx - self.deleted),
+                        self.original_len - self.idx,
+                    );
+                }
+
+                // `deleted > 0`, so `new_len < N` and the marker must be written.
+                self.tiny.buf[N - 1] = encode_len(self.original_len - self.deleted);
             }
         }
 
-        let len = self.len();
-        let mut guard = SetLenOnDrop {
+        fn process_loop<F, const N: usize, const DELETED: bool>(
+            original_len: usize,
+            f: &mut F,
+            g: &mut BackshiftOnDrop<'_, N>,
+        ) where
+            F: FnMut(NonNullAscii) -> bool,
+        {
+            while g.idx < original_len {
+                // SAFETY: `g.idx < original_len <= N`, and the byte is a valid
+                // `NonNullAscii`, as all visited bytes are part of the content.
+                let ascii = unsafe {
+                    let byte = *g.tiny.buf.get_unchecked(g.idx);
+                    NonNullAscii::from_u8_unchecked(byte)
+                };
+
+                if !f(ascii) {
+                    // Advance only after `f` returned, so a panic in `f` keeps
+                    // the current character in the unvisited tail.
+                    g.idx += 1;
+                    g.deleted += 1;
+                    if DELETED {
+                        continue;
+                    }
+                    // First deletion found, switch to the shifting loop.
+                    return;
+                }
+
+                if DELETED {
+                    // SAFETY: `g.deleted <= g.idx < N`, so the destination is in bounds.
+                    unsafe {
+                        *g.tiny.buf.get_unchecked_mut(g.idx - g.deleted) = ascii.to_u8();
+                    }
+                }
+                g.idx += 1;
+            }
+        }
+
+        let original_len = self.len();
+        let mut g = BackshiftOnDrop {
             tiny: self,
             idx: 0,
             deleted: 0,
+            original_len,
         };
 
-        while guard.idx < len {
-            // SAFETY: `byte` is a valid `NonNullAscii` and `guard.idx` is
-            // within `tiny.buf` bounds
-            let ascii = unsafe {
-                let byte = *guard.tiny.buf.get_unchecked(guard.idx);
-                NonNullAscii::from_u8_unchecked(byte)
-            };
+        // Stage 1: nothing deleted yet, so no data needs to be moved.
+        process_loop::<F, N, false>(original_len, &mut f, &mut g);
 
-            if !f(ascii) {
-                guard.deleted += 1;
-            } else if guard.deleted > 0 {
-                let free_idx = guard.idx - guard.deleted;
-                guard.tiny.buf[free_idx] = ascii.to_u8();
-            }
+        // Stage 2: at least one deletion, retained characters are shifted back.
+        process_loop::<F, N, true>(original_len, &mut f, &mut g);
 
-            // Point idx to the next char
-            guard.idx += 1;
-        }
-
-        drop(guard);
+        drop(g);
     }
 
     /// Decomposes a [`TinyAscii`] into its raw components: `(byte_array, length)`.
