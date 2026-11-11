@@ -22,7 +22,7 @@ fn ascii_string(len: impl Into<SizeRange>) -> impl Strategy<Value = String> {
 
 proptest! {
     #[test]
-    fn try_new_parse_invalid_ascii(
+    fn try_from_str_parse_invalid_ascii(
         mut s in ascii_string(1..=128),
         invalid_idx in 0usize..128,
         invalid_byte in 128u8..=255,
@@ -33,7 +33,7 @@ proptest! {
             bytes[idx] = invalid_byte;
         }
 
-        let result = TinyAscii128::try_new(&s);
+        let result = TinyAscii128::try_from_str(&s);
 
         prop_assert_eq!(result, Err(WriteAsciiError::InvalidAscii));
     }
@@ -41,10 +41,10 @@ proptest! {
 
 proptest! {
     #[test]
-    fn try_new_parse_invalid_capacity(
+    fn try_from_str_parse_invalid_capacity(
         s in ascii_string(129..=192),
     ) {
-        let result = TinyAscii128::try_new(&s);
+        let result = TinyAscii128::try_from_str(&s);
 
         prop_assert_eq!(result, Err(WriteAsciiError::Capacity(CapacityLimitError)));
     }
@@ -52,11 +52,11 @@ proptest! {
 
 proptest! {
     #[test]
-    fn try_from_bytes_valid_eq_try_new(
+    fn try_from_bytes_valid_eq_try_from_str(
         s in ascii_string(0..=128),
     ) {
         let from_bytes = TinyAscii128::try_from_bytes(s.as_bytes()).unwrap();
-        let from_str = TinyAscii128::try_new(&s).unwrap();
+        let from_str = TinyAscii128::try_from_str(&s).unwrap();
 
         prop_assert_eq!(from_bytes, from_str);
     }
@@ -114,7 +114,7 @@ proptest! {
         mut s in ascii_string(0..=127),
         ascii in non_null_ascii_strategy(),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push(ascii);
 
@@ -133,7 +133,7 @@ proptest! {
         s in ascii_string(128),
         ascii in non_null_ascii_strategy(),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push(ascii);
 
@@ -149,7 +149,7 @@ proptest! {
         s in ascii_string(0..=128),
         byte in 0u8..=255u8,
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push_u8(byte);
 
@@ -172,7 +172,7 @@ proptest! {
         s in ascii_string(0..=96),
         append in ascii_string(0..=32),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push_str(&append);
 
@@ -189,7 +189,7 @@ proptest! {
         mut append in ".{0,7}"
     ) {
         append.push('😀');
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push_str(&append);
 
@@ -205,7 +205,7 @@ proptest! {
         s in ascii_string(0..=64),
         bytes in prop::collection::vec(1u8..=127u8, 0..=64),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push_bytes(&bytes);
 
@@ -224,7 +224,7 @@ proptest! {
     ) {
         let idx = invalid_idx.min(bytes.len() - 1);
         bytes[idx] = 0;
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push_bytes(&bytes);
 
@@ -241,7 +241,7 @@ proptest! {
         bytes in prop::collection::vec(0u8..=255u8, 0..=32),
         replacement in non_null_ascii_strategy(),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push_lossy(&bytes, replacement);
 
@@ -265,7 +265,7 @@ proptest! {
         s in ascii_string(0..=128),
         slice in prop::collection::vec(non_null_ascii_strategy(), 0..=128),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_push_slice(&slice);
 
@@ -289,7 +289,7 @@ proptest! {
         ascii in non_null_ascii_strategy()
     ) {
         let idx = idx.min(s.len());
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_insert(idx, ascii);
 
@@ -313,7 +313,7 @@ proptest! {
         insert in prop::collection::vec(non_null_ascii_strategy(), 0..=128),
         idx in 0usize..=128,
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.try_insert_slice(idx, &insert);
 
@@ -348,7 +348,7 @@ proptest! {
         idx in 0usize..=128,
         ascii in non_null_ascii_strategy(),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
         let idx = idx.min(ta.len());
 
         ta.try_insert(idx, ascii).unwrap();
@@ -366,7 +366,7 @@ proptest! {
         start in 0usize..=128,
         end in 0usize..=128,
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
         let available = ta.available_capacity();
 
         let result = ta.extend_from_within(start..end);
@@ -391,7 +391,7 @@ proptest! {
         end in 0usize..=128,
         repl in prop::collection::vec(non_null_ascii_strategy(), 0..=128),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let available_cap = ta.available_capacity();
 
@@ -420,7 +420,7 @@ proptest! {
         start in 0usize..=128,
         end in 0usize..=128,
     ) {
-        let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
+        let mut ta: TinyAscii128 = TinyAscii128::try_from_str(&s).unwrap();
 
         let result = ta.remove_range(start..end);
 
@@ -443,7 +443,7 @@ proptest! {
         s in ascii_string(0..=128),
         idx in 0usize..=128,
     ) {
-        let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
+        let mut ta: TinyAscii128 = TinyAscii128::try_from_str(&s).unwrap();
 
         let removed = ta.remove(idx);
 
@@ -467,7 +467,7 @@ proptest! {
         s in ascii_string(0..=128),
         pop_count in 1usize..=128,
     ) {
-        let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
+        let mut ta: TinyAscii128 = TinyAscii128::try_from_str(&s).unwrap();
         let pop_count = pop_count.min(ta.len());
 
         for i in 1..pop_count + 1 {
@@ -486,7 +486,7 @@ proptest! {
     fn pop_and_push_reversibility(
         s in ascii_string(1..=128),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         let mut stack = Vec::with_capacity(s.len());
         while let Some(c) = ta.pop() {
@@ -508,7 +508,7 @@ proptest! {
         s in ascii_string(0..=128),
         greater in non_null_ascii_strategy(),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         ta.retain(|c| c > greater);
 
@@ -526,7 +526,7 @@ proptest! {
     fn retain_all_false(
         s in ascii_string(0..=128),
     ) {
-        let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
+        let mut ta: TinyAscii128 = TinyAscii128::try_from_str(&s).unwrap();
 
         ta.retain(|_| false);
 
@@ -539,7 +539,7 @@ proptest! {
     fn retain_all_true(
         s in ascii_string(0..=128),
     ) {
-        let mut ta = TinyAscii128::try_new(&s).unwrap();
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
 
         ta.retain(|_| true);
 
@@ -555,7 +555,7 @@ proptest! {
         new_len in 0usize..256,
     ) {
         let true_len = new_len.min(s.len());
-        let mut ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
+        let mut ta: TinyAscii128 = TinyAscii128::try_from_str(&s).unwrap();
 
         ta.truncate(new_len);
 
@@ -572,9 +572,9 @@ proptest! {
     fn clear_then_fill_equivalence(
         s in ascii_string(0..=128),
     ) {
-        let ta1 = TinyAscii128::try_new(&s).unwrap();
+        let ta1 = TinyAscii128::try_from_str(&s).unwrap();
 
-        let mut ta2 = TinyAscii128::try_new(&s).unwrap();
+        let mut ta2 = TinyAscii128::try_from_str(&s).unwrap();
         ta2.clear();
 
         for c in s.bytes() {
@@ -590,7 +590,7 @@ proptest! {
     fn resize_preserves_input(
         s in ascii_string(0..=128),
     ) {
-        let ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
+        let ta: TinyAscii128 = TinyAscii128::try_from_str(&s).unwrap();
 
         let r4: TinyAscii4 = ta.clone().resize();
         prop_assert_eq!(r4.capacity(), 4);
@@ -623,7 +623,7 @@ proptest! {
     fn into_parts_from_parts_roundtrip(
         s in ascii_string(0..=128),
     ) {
-        let ta: TinyAscii128 = TinyAscii128::try_new(&s).unwrap();
+        let ta: TinyAscii128 = TinyAscii128::try_from_str(&s).unwrap();
         let (arr, len) = ta.into_parts();
 
         let rebuilt = unsafe { TinyAscii128::from_parts(arr, len) };

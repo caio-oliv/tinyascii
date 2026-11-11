@@ -48,70 +48,70 @@ fn tinyascii_is_packed() {
 
 #[test]
 fn empty_len_is_zero() {
-    assert_eq!(TinyAscii4::empty().len(), 0);
-    assert_eq!(TinyAscii8::empty().len(), 0);
-    assert_eq!(TinyAscii16::empty().len(), 0);
+    assert_eq!(TinyAscii4::new().len(), 0);
+    assert_eq!(TinyAscii8::new().len(), 0);
+    assert_eq!(TinyAscii16::new().len(), 0);
 }
 
 #[test]
 fn empty_is_empty_true() {
-    assert!(TinyAscii4::empty().is_empty());
-    assert!(TinyAscii8::empty().is_empty());
-    assert!(TinyAscii16::empty().is_empty());
+    assert!(TinyAscii4::new().is_empty());
+    assert!(TinyAscii8::new().is_empty());
+    assert!(TinyAscii16::new().is_empty());
 }
 
 #[test]
 fn empty_as_str() {
-    assert_eq!(TinyAscii4::empty().as_str(), "");
-    assert_eq!(TinyAscii8::empty().as_str(), "");
+    assert_eq!(TinyAscii4::new().as_str(), "");
+    assert_eq!(TinyAscii8::new().as_str(), "");
 }
 
 #[test]
 fn empty_as_bytes() {
-    assert_eq!(TinyAscii4::empty().as_bytes(), &[] as &[u8]);
-    assert_eq!(TinyAscii8::empty().as_bytes(), &[] as &[u8]);
+    assert_eq!(TinyAscii4::new().as_bytes(), &[] as &[u8]);
+    assert_eq!(TinyAscii8::new().as_bytes(), &[] as &[u8]);
 }
 
 #[test]
 fn empty_as_ascii() {
-    let empty = TinyAscii4::empty();
+    let empty = TinyAscii4::new();
     let ascii: &[NonNullAscii] = empty.as_ascii();
     assert!(ascii.is_empty());
 }
 
 #[test]
 fn empty_available_capacity() {
-    assert_eq!(TinyAscii4::empty().available_capacity(), 4);
-    assert_eq!(TinyAscii8::empty().available_capacity(), 8);
-    assert_eq!(TinyAscii16::empty().available_capacity(), 16);
+    assert_eq!(TinyAscii4::new().available_capacity(), 4);
+    assert_eq!(TinyAscii8::new().available_capacity(), 8);
+    assert_eq!(TinyAscii16::new().available_capacity(), 16);
 }
 
 #[test]
 fn empty_is_full_false() {
-    assert!(!TinyAscii4::empty().is_full());
-    assert!(!TinyAscii8::empty().is_full());
+    assert!(!TinyAscii4::new().is_full());
+    assert!(!TinyAscii8::new().is_full());
 }
 
 #[test]
 fn full_is_full_true() {
-    let s: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
+    let s: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
     assert!(s.is_full());
     assert!(!s.is_empty());
     assert_eq!(s.available_capacity(), 0);
 }
 
 #[test]
-fn try_new_various_sizes() {
-    let s4: TinyAscii4 = TinyAscii4::try_new("ab").unwrap();
+fn try_from_str_various_sizes() {
+    let s4: TinyAscii4 = TinyAscii4::try_from_str("ab").unwrap();
     assert_eq!(&s4, "ab");
 
-    let s8: TinyAscii8 = TinyAscii8::try_new(&"hello world"[..5]).unwrap();
+    let s8: TinyAscii8 = TinyAscii8::try_from_str(&"hello world"[..5]).unwrap();
     assert_eq!(&s8, "hello");
 
-    let s16: TinyAscii16 = TinyAscii16::try_new("test string").unwrap();
+    let s16: TinyAscii16 = TinyAscii16::try_from_str("test string").unwrap();
     assert_eq!(&s16, "test string");
 
-    let s32: TinyAscii32 = TinyAscii32::try_new("a longer test string here").unwrap();
+    let s32: TinyAscii32 = TinyAscii32::try_from_str("a longer test string here").unwrap();
     assert_eq!(&s32, "a longer test string here");
 }
 
@@ -192,7 +192,7 @@ fn from_ascii_lossy_empty() {
 
 #[test]
 fn resize_extend() {
-    let s: TinyAscii4 = TinyAscii4::try_new("hi").unwrap();
+    let s: TinyAscii4 = TinyAscii4::try_from_str("hi").unwrap();
     let s16: TinyAscii16 = s.resize::<16>();
     assert_eq!(&s16, "hi");
     assert_eq!(s16.capacity(), 16);
@@ -201,7 +201,7 @@ fn resize_extend() {
 
 #[test]
 fn resize_truncate() {
-    let s: TinyAscii32 = TinyAscii32::try_new("hello world!!!").unwrap();
+    let s: TinyAscii32 = TinyAscii32::try_from_str("hello world!!!").unwrap();
     let s8: TinyAscii8 = s.resize::<8>();
     assert_eq!(&s8, "hello wo");
     assert_eq!(s8.capacity(), 8);
@@ -209,7 +209,7 @@ fn resize_truncate() {
 
 #[test]
 fn resize_empty() {
-    let s: TinyAscii32 = TinyAscii32::empty();
+    let s: TinyAscii32 = TinyAscii32::new();
     let s8: TinyAscii8 = s.resize::<8>();
     assert!(s8.is_empty());
     assert_eq!(s8.capacity(), 8);
@@ -217,7 +217,7 @@ fn resize_empty() {
 
 #[test]
 fn resize_full_to_full() {
-    let s: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
+    let s: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
     let s4: TinyAscii4 = s.resize::<4>();
     assert_eq!(&*s4, "abcd");
 }
@@ -228,7 +228,7 @@ fn resize_full_to_full() {
 
 #[test]
 fn into_parts_roundtrip_basic() {
-    let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
     let (arr, len) = s.clone().into_parts();
     let rebuilt = unsafe { TinyAscii8::from_parts(arr, len) };
     assert_eq!(&rebuilt, "hello");
@@ -236,7 +236,7 @@ fn into_parts_roundtrip_basic() {
 
 #[test]
 fn into_parts_roundtrip_empty() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     let (arr, len) = s.into_parts();
     let rebuilt = unsafe { TinyAscii4::from_parts(arr, len) };
     assert!(rebuilt.is_empty());
@@ -245,7 +245,7 @@ fn into_parts_roundtrip_empty() {
 
 #[test]
 fn into_parts_roundtrip_full() {
-    let s: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
+    let s: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
     let (arr, len) = s.into_parts();
     let rebuilt = unsafe { TinyAscii4::from_parts(arr, len) };
     assert_eq!(&rebuilt, "abcd");
@@ -265,7 +265,7 @@ fn into_parts_roundtrip_max_capacity() {
 
 #[test]
 fn into_parts_from_parts_modify() {
-    let s: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
     let (mut arr, len) = s.into_parts();
     arr[1] = b'O';
     let rebuilt = unsafe { TinyAscii8::from_parts(arr, len) };

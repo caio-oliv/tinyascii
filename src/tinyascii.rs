@@ -51,12 +51,12 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii64;
-    /// let s = TinyAscii64::empty();
+    /// let s = TinyAscii64::new();
     ///
     /// assert_eq!(&s, "");
     /// ```
     #[inline(always)]
-    pub const fn empty() -> Self {
+    pub const fn new() -> Self {
         const { assert_capacity::<N>() }
 
         let mut this = Self { buf: [0; N] };
@@ -73,7 +73,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii32;
-    /// let s = TinyAscii32::try_new("Hello world!").unwrap();
+    /// let s = TinyAscii32::try_from_str("Hello world!").unwrap();
     /// assert_eq!(&s, "Hello world!");
     /// ```
     ///
@@ -81,10 +81,10 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii32, error::WriteAsciiError};
-    /// let err = TinyAscii32::try_new("invalid 😎 ascii").unwrap_err();
+    /// let err = TinyAscii32::try_from_str("invalid 😎 ascii").unwrap_err();
     /// assert_eq!(err, WriteAsciiError::InvalidAscii);
     ///
-    /// let err = TinyAscii32::try_new("null present \0").unwrap_err();
+    /// let err = TinyAscii32::try_from_str("null present \0").unwrap_err();
     /// assert_eq!(err, WriteAsciiError::InvalidAscii);
     /// ```
     ///
@@ -92,11 +92,11 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, error::{WriteAsciiError, CapacityLimitError}};
-    /// let err = TinyAscii8::try_new("not soo tiny string").unwrap_err();
+    /// let err = TinyAscii8::try_from_str("not soo tiny string").unwrap_err();
     /// assert_eq!(err, WriteAsciiError::Capacity(CapacityLimitError));
     /// ```
     #[inline(always)]
-    pub fn try_new(s: &str) -> Result<Self, WriteAsciiError> {
+    pub fn try_from_str(s: &str) -> Result<Self, WriteAsciiError> {
         const { assert_capacity::<N>() }
 
         Self::try_from_bytes(s.as_bytes())
@@ -144,7 +144,7 @@ impl<const N: usize> TinyAscii<N> {
             return Err(WriteAsciiError::Capacity(CapacityLimitError));
         }
 
-        let mut tiny = Self::empty();
+        let mut tiny = Self::new();
         tiny.buf[N - 1] = encode_len(bytes.len());
 
         // SAFETY:
@@ -207,7 +207,7 @@ impl<const N: usize> TinyAscii<N> {
             return Err(CapacityLimitError);
         }
 
-        let mut tiny = Self::empty();
+        let mut tiny = Self::new();
         tiny.buf[N - 1] = encode_len(bytes.len());
 
         // SAFETY:
@@ -229,7 +229,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii, NonNullAscii, error::CapacityLimitError};
-    /// let s = TinyAscii::<20>::try_new("to be extended ...").unwrap();
+    /// let s = TinyAscii::<20>::try_from_str("to be extended ...").unwrap();
     /// assert_eq!(s.capacity(), 20);
     ///
     /// let s = s.resize::<100>();
@@ -241,7 +241,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii, NonNullAscii, error::CapacityLimitError};
-    /// let s = TinyAscii::<20>::try_new("to be truncated ...").unwrap();
+    /// let s = TinyAscii::<20>::try_from_str("to be truncated ...").unwrap();
     /// assert_eq!(s.capacity(), 20);
     ///
     /// let s = s.resize::<8>();
@@ -277,7 +277,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii;
-    /// let s = TinyAscii::<10>::empty();
+    /// let s = TinyAscii::<10>::new();
     ///
     /// assert_eq!(s.capacity(), 10);
     /// ```
@@ -293,7 +293,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii8;
-    /// let a = TinyAscii8::try_new("foo.bar").unwrap();
+    /// let a = TinyAscii8::try_from_str("foo.bar").unwrap();
     /// assert_eq!(a.len(), 7);
     /// ```
     pub const fn len(&self) -> usize {
@@ -320,7 +320,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii8;
-    /// let s = TinyAscii8::try_new("foo").unwrap();
+    /// let s = TinyAscii8::try_from_str("foo").unwrap();
     ///
     /// assert_eq!(s.available_capacity(), 5);
     /// assert_eq!(s.len() + s.available_capacity(), s.capacity());
@@ -336,7 +336,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii128, NonNullAscii};
-    /// let mut v = TinyAscii128::empty();
+    /// let mut v = TinyAscii128::new();
     /// assert_eq!(v.len(), 0);
     /// assert!(v.is_empty());
     ///
@@ -354,7 +354,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii;
-    /// let mut v = TinyAscii::<6>::try_new("foobar").unwrap();
+    /// let mut v = TinyAscii::<6>::try_from_str("foobar").unwrap();
     ///
     /// assert_eq!(v.capacity(), v.len());
     /// assert!(v.is_full());
@@ -376,7 +376,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii8;
-    /// let s = TinyAscii8::try_new("foobar").unwrap();
+    /// let s = TinyAscii8::try_from_str("foobar").unwrap();
     /// assert_eq!(s.as_bytes(), b"foobar");
     /// ```
     #[inline(always)]
@@ -392,7 +392,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii16;
-    /// let s = TinyAscii16::try_new("hello world").unwrap();
+    /// let s = TinyAscii16::try_from_str("hello world").unwrap();
     /// assert_eq!(s.as_str(), "hello world");
     /// ```
     #[inline(always)]
@@ -407,7 +407,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii};
-    /// let s = TinyAscii8::try_new("abc").unwrap();
+    /// let s = TinyAscii8::try_from_str("abc").unwrap();
     /// let arr = [NonNullAscii::SmallA, NonNullAscii::SmallB, NonNullAscii::SmallC];
     /// assert_eq!(s.as_ascii(), &arr);
     /// ```
@@ -424,7 +424,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii};
-    /// let mut s = TinyAscii8::try_new("111").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("111").unwrap();
     ///
     /// let ascii = s.as_mut_ascii();
     /// ascii[1] = NonNullAscii::Digit0;
@@ -446,7 +446,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii4;
-    /// let mut s = TinyAscii4::try_new("baz").unwrap();
+    /// let mut s = TinyAscii4::try_from_str("baz").unwrap();
     ///
     /// s.clear();
     ///
@@ -467,7 +467,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii8;
-    /// let mut s = TinyAscii8::try_new("hello").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("hello").unwrap();
     ///
     /// s.truncate(2);
     ///
@@ -495,7 +495,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii16, NonNullAscii};
-    /// let mut s = TinyAscii16::try_new("hello").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("hello").unwrap();
     ///
     /// s.try_push(NonNullAscii::ExclamationMark).unwrap();
     ///
@@ -506,7 +506,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii, NonNullAscii, error::CapacityLimitError};
-    /// let mut s: TinyAscii<5> = TinyAscii::try_new("hello").unwrap();
+    /// let mut s: TinyAscii<5> = TinyAscii::try_from_str("hello").unwrap();
     ///
     /// let err = s.try_push(NonNullAscii::ExclamationMark).unwrap_err();
     ///
@@ -535,7 +535,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii};
-    /// let mut s = TinyAscii8::try_new("foo").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("foo").unwrap();
     ///
     /// let bar = [NonNullAscii::SmallB, NonNullAscii::SmallA, NonNullAscii::SmallR];
     /// s.try_push_slice(&bar).unwrap();
@@ -547,7 +547,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii4, NonNullAscii, error::CapacityLimitError};
-    /// let mut s = TinyAscii4::try_new("foo").unwrap();
+    /// let mut s = TinyAscii4::try_from_str("foo").unwrap();
     ///
     /// let bar = [NonNullAscii::SmallB, NonNullAscii::SmallA, NonNullAscii::SmallR];
     /// let err = s.try_push_slice(&bar).unwrap_err();
@@ -596,7 +596,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii16;
-    /// let mut s = TinyAscii16::try_new("correct").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("correct").unwrap();
     ///
     /// s.try_push_u8(b'!').unwrap();
     ///
@@ -607,7 +607,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, error::WriteAsciiError};
-    /// let mut s = TinyAscii8::try_new("invalid").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("invalid").unwrap();
     ///
     /// let err = s.try_push_u8(201).unwrap_err();
     ///
@@ -619,7 +619,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii, error::{WriteAsciiError, CapacityLimitError}};
-    /// let mut s: TinyAscii<5> = TinyAscii::try_new("hello").unwrap();
+    /// let mut s: TinyAscii<5> = TinyAscii::try_from_str("hello").unwrap();
     ///
     /// let err = s.try_push_u8(b'!').unwrap_err();
     ///
@@ -645,7 +645,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii16;
-    /// let mut s = TinyAscii16::try_new("correct").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("correct").unwrap();
     ///
     /// let bytes = [b' ', b'a', b'n', b's', b'w', b'e', b'r'];
     /// s.try_push_bytes(&bytes).unwrap();
@@ -657,7 +657,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii16, error::WriteAsciiError};
-    /// let mut s = TinyAscii16::try_new("invalid").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("invalid").unwrap();
     ///
     /// let bytes = [65, 66, 67, 0];
     /// let err = s.try_push_bytes(&bytes).unwrap_err();
@@ -670,7 +670,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii, error::{WriteAsciiError, CapacityLimitError}};
-    /// let mut s: TinyAscii<5> = TinyAscii::try_new("hello").unwrap();
+    /// let mut s: TinyAscii<5> = TinyAscii::try_from_str("hello").unwrap();
     ///
     /// let err = s.try_push_bytes(" world".as_bytes()).unwrap_err();
     ///
@@ -722,7 +722,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii16, NonNullAscii};
-    /// let mut s = TinyAscii16::try_new("123").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("123").unwrap();
     ///
     /// let bytes = [181, 65, 66, 67, 0];
     /// s.try_push_lossy(&bytes, NonNullAscii::QuestionMark).unwrap();
@@ -734,7 +734,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii, NonNullAscii, error::CapacityLimitError};
-    /// let mut s: TinyAscii<5> = TinyAscii::try_new("hello").unwrap();
+    /// let mut s: TinyAscii<5> = TinyAscii::try_from_str("hello").unwrap();
     ///
     /// let err = s.try_push_lossy(" world".as_bytes(), NonNullAscii::CommercialAt).unwrap_err();
     ///
@@ -771,7 +771,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii16;
-    /// let mut s = TinyAscii16::try_new("foo").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("foo").unwrap();
     ///
     /// s.try_push_str("bar").unwrap();
     ///
@@ -782,7 +782,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii16, error::WriteAsciiError};
-    /// let mut s = TinyAscii16::try_new("non-ascii").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("non-ascii").unwrap();
     ///
     /// let err = s.try_push_str("⚡️").unwrap_err();
     ///
@@ -794,7 +794,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii, error::{WriteAsciiError, CapacityLimitError}};
-    /// let mut s: TinyAscii<6> = TinyAscii::try_new("full").unwrap();
+    /// let mut s: TinyAscii<6> = TinyAscii::try_from_str("full").unwrap();
     ///
     /// let err = s.try_push_str(" house").unwrap_err();
     ///
@@ -819,7 +819,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii4, NonNullAscii};
-    /// let mut s = TinyAscii4::empty();
+    /// let mut s = TinyAscii4::new();
     ///
     /// s.try_insert(0, NonNullAscii::SmallF).unwrap();
     /// s.try_insert(1, NonNullAscii::SmallO).unwrap();
@@ -832,7 +832,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii4, NonNullAscii, error::{InsertAsciiError, CapacityLimitError}};
-    /// let mut s = TinyAscii4::try_new("full").unwrap();
+    /// let mut s = TinyAscii4::try_from_str("full").unwrap();
     ///
     /// let err = s.try_insert(2, NonNullAscii::HyphenMinus).unwrap_err();
     ///
@@ -844,7 +844,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii, error::{InsertAsciiError, CapacityLimitError}};
-    /// let mut s = TinyAscii8::try_new("12345").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("12345").unwrap();
     ///
     /// let err = s.try_insert(8, NonNullAscii::PercentSign).unwrap_err();
     ///
@@ -900,7 +900,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii};
-    /// let mut s = TinyAscii8::try_new("bar").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("bar").unwrap();
     /// let foo = [NonNullAscii::SmallF, NonNullAscii::SmallO, NonNullAscii::SmallO];
     ///
     /// s.try_insert_slice(0, &foo).unwrap();
@@ -912,7 +912,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii4, NonNullAscii, error::{InsertAsciiError, CapacityLimitError}};
-    /// let mut s = TinyAscii4::try_new("bar").unwrap();
+    /// let mut s = TinyAscii4::try_from_str("bar").unwrap();
     /// let foo = [NonNullAscii::SmallF, NonNullAscii::SmallO, NonNullAscii::SmallO];
     ///
     /// let err = s.try_insert_slice(3, &foo).unwrap_err();
@@ -925,7 +925,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii, error::{InsertAsciiError, CapacityLimitError}};
-    /// let mut s = TinyAscii8::try_new("bar").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("bar").unwrap();
     /// let foo = [NonNullAscii::SmallF, NonNullAscii::SmallO, NonNullAscii::SmallO];
     ///
     /// let err = s.try_insert_slice(4, &foo).unwrap_err();
@@ -986,7 +986,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// use tinyascii::{TinyAscii32, NonNullAscii};
-    /// let mut s = TinyAscii32::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii32::try_from_str("abcde").unwrap();
     ///
     /// s.extend_from_within(2..).unwrap();
     /// assert_eq!(&s, "abcdecde");
@@ -1007,7 +1007,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// use tinyascii::{TinyAscii32, error::InsertRangeError};
-    /// let mut s = TinyAscii32::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii32::try_from_str("abcde").unwrap();
     ///
     /// let err = s.extend_from_within(2..9).unwrap_err();
     /// assert_eq!(err, InsertRangeError::RangeOutOfBounds);
@@ -1023,7 +1023,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// use tinyascii::{TinyAscii8, error::{InsertRangeError, CapacityLimitError}};
-    /// let mut s = TinyAscii8::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     ///
     /// let err = s.extend_from_within(..).unwrap_err();
     /// assert_eq!(err, InsertRangeError::Capacity(CapacityLimitError));
@@ -1084,7 +1084,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii32, NonNullAscii};
-    /// let mut s = TinyAscii32::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii32::try_from_str("abcde").unwrap();
     ///
     /// let replacement = [NonNullAscii::Digit1, NonNullAscii::Digit2, NonNullAscii::Digit3];
     ///
@@ -1105,7 +1105,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii16, NonNullAscii, error::InsertRangeError};
-    /// let mut s = TinyAscii16::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("abcde").unwrap();
     ///
     /// let err = s.replace_range(2..6, &[NonNullAscii::QuestionMark]).unwrap_err();
     /// assert_eq!(err, InsertRangeError::RangeOutOfBounds);
@@ -1121,7 +1121,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii, error::{InsertRangeError, CapacityLimitError}};
-    /// let mut s = TinyAscii8::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     ///
     /// let replacement = [NonNullAscii::NumberSign; 10];
     ///
@@ -1201,7 +1201,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii32;
-    /// let mut s = TinyAscii32::try_new("0123456789").unwrap();
+    /// let mut s = TinyAscii32::try_from_str("0123456789").unwrap();
     ///
     /// s.remove_range(2..4).unwrap();
     /// assert_eq!(&s, "01456789");
@@ -1220,7 +1220,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii32, error::RemoveRangeError};
-    /// let mut s = TinyAscii32::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii32::try_from_str("abcde").unwrap();
     ///
     /// let err = s.remove_range(2..6).unwrap_err();
     /// assert_eq!(err, RemoveRangeError);
@@ -1279,7 +1279,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii, error::RemoveRangeError};
-    /// let mut s = TinyAscii8::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     ///
     /// assert_eq!(s.remove(0), Some(NonNullAscii::SmallA));
     /// assert_eq!(s.remove(1), Some(NonNullAscii::SmallC));
@@ -1292,7 +1292,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii, error::RemoveRangeError};
-    /// let mut s = TinyAscii8::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     ///
     /// assert_eq!(s.remove(9), None);
     ///
@@ -1334,7 +1334,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii32, NonNullAscii};
-    /// let mut s = TinyAscii32::try_new("101").unwrap();
+    /// let mut s = TinyAscii32::try_from_str("101").unwrap();
     ///
     /// assert_eq!(s.pop(), Some(NonNullAscii::Digit1));
     /// assert_eq!(&s, "10");
@@ -1372,7 +1372,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii16;
-    /// let mut s = TinyAscii16::try_new("f_o_ob_ar").unwrap();
+    /// let mut s = TinyAscii16::try_from_str("f_o_ob_ar").unwrap();
     ///
     /// s.retain(|c| c != '_');
     ///
@@ -1384,7 +1384,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii8;
-    /// let mut s = TinyAscii8::try_new("abcde").unwrap();
+    /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     /// let keep = [false, true, true, false, true];
     ///
     /// let mut iter = keep.iter();
@@ -1505,7 +1505,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, TinyAscii};
-    /// let s = TinyAscii8::try_new("foobar").unwrap();
+    /// let s = TinyAscii8::try_from_str("foobar").unwrap();
     ///
     /// let (mut arr, len) = s.into_parts();
     ///
@@ -1541,7 +1541,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::TinyAscii128;
-    /// let ascii = TinyAscii128::try_new("bar").unwrap();
+    /// let ascii = TinyAscii128::try_from_str("bar").unwrap();
     ///
     /// let (mut arr, len) = ascii.into_parts();
     ///

@@ -30,7 +30,7 @@ impl<const N: usize> MutationScenario<N> {
         let idx = rng.random_range(0..base_len);
 
         let text = sample_ascii_string(rng, push_len);
-        assert_matches!(TinyAscii::<128>::try_new(&text), Ok(_));
+        assert_matches!(TinyAscii::<128>::try_from_str(&text), Ok(_));
 
         let ascii = text
             .bytes()
@@ -52,7 +52,7 @@ impl<const N: usize> MutationScenario<N> {
 
         let text = sample_non_ascii_string(rng, push_len);
         assert_matches!(
-            TinyAscii::<128>::try_new(&text),
+            TinyAscii::<128>::try_from_str(&text),
             Err(WriteAsciiError::InvalidAscii)
         );
 

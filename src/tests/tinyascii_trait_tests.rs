@@ -12,7 +12,7 @@ use crate::{
 
 #[test]
 fn deref_to_str() {
-    let s: TinyAscii16 = TinyAscii16::try_new("hello").unwrap();
+    let s: TinyAscii16 = TinyAscii16::try_from_str("hello").unwrap();
 
     // Deref gives us a `&str`, so string methods work
     assert_eq!(s.len(), 5);
@@ -23,7 +23,7 @@ fn deref_to_str() {
 
 #[test]
 fn deref_empty() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
 
     assert_eq!(s.len(), 0);
     assert!(s.is_empty());
@@ -36,7 +36,7 @@ fn deref_empty() {
 
 #[test]
 fn as_ref_str() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     assert_eq!(AsRef::<str>::as_ref(&s), "abc");
 }
 
@@ -46,7 +46,7 @@ fn as_ref_str() {
 
 #[test]
 fn as_ref_nonnull_ascii() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     let ascii: &[NonNullAscii] = AsRef::<[NonNullAscii]>::as_ref(&s);
     assert_eq!(ascii.len(), 3);
     assert_eq!(ascii[0], NonNullAscii::SmallA);
@@ -55,7 +55,7 @@ fn as_ref_nonnull_ascii() {
 
 #[test]
 fn as_ref_nonnull_ascii_empty() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     let ascii: &[NonNullAscii] = AsRef::<[NonNullAscii]>::as_ref(&s);
     assert!(ascii.is_empty());
 }
@@ -66,7 +66,7 @@ fn as_ref_nonnull_ascii_empty() {
 
 #[test]
 fn as_ref_u8() {
-    let s: TinyAscii8 = TinyAscii8::try_new("AB").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("AB").unwrap();
     assert_eq!(AsRef::<[u8]>::as_ref(&s), b"AB");
 }
 
@@ -76,7 +76,7 @@ fn as_ref_u8() {
 
 #[test]
 fn as_mut_nonnull_ascii() {
-    let mut s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let mut s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     let ascii: &mut [NonNullAscii] = AsMut::<[NonNullAscii]>::as_mut(&mut s);
     ascii[1] = NonNullAscii::Digit9;
     assert_eq!(&s, "a9c");
@@ -84,7 +84,7 @@ fn as_mut_nonnull_ascii() {
 
 #[test]
 fn as_mut_empty() {
-    let mut s: TinyAscii4 = TinyAscii4::empty();
+    let mut s: TinyAscii4 = TinyAscii4::new();
     let ascii: &mut [NonNullAscii] = AsMut::<[NonNullAscii]>::as_mut(&mut s);
     assert!(ascii.is_empty());
 }
@@ -97,7 +97,7 @@ fn as_mut_empty() {
 fn borrow_nonnull_ascii() {
     use core::borrow::Borrow;
 
-    let s: TinyAscii8 = TinyAscii8::try_new("x").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("x").unwrap();
     let borrowed: &[NonNullAscii] = s.borrow();
     assert_eq!(borrowed, &[NonNullAscii::SmallX]);
 }
@@ -106,7 +106,7 @@ fn borrow_nonnull_ascii() {
 fn borrow_str() {
     use core::borrow::Borrow;
 
-    let s: TinyAscii8 = TinyAscii8::try_new("x").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("x").unwrap();
     let borrowed: &str = s.borrow();
     assert_eq!(borrowed, "x");
 }
@@ -119,7 +119,7 @@ fn borrow_str() {
 fn borrow_mut_nonnull_ascii() {
     use core::borrow::BorrowMut;
 
-    let mut s: TinyAscii8 = TinyAscii8::try_new("12").unwrap();
+    let mut s: TinyAscii8 = TinyAscii8::try_from_str("12").unwrap();
     let borrowed: &mut [NonNullAscii] = BorrowMut::borrow_mut(&mut s);
     borrowed[0] = NonNullAscii::Digit9;
     assert_eq!(&s, "92");
@@ -152,19 +152,19 @@ fn default_capacity() {
 
 #[test]
 fn display_simple() {
-    let s: TinyAscii16 = TinyAscii16::try_new("hello").unwrap();
+    let s: TinyAscii16 = TinyAscii16::try_from_str("hello").unwrap();
     assert_eq!(format!("{}", s), "hello");
 }
 
 #[test]
 fn display_empty() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     assert_eq!(format!("{}", s), "");
 }
 
 #[test]
 fn display_full_capacity() {
-    let s: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
+    let s: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
     assert_eq!(format!("{}", s), "abcd");
 }
 
@@ -188,20 +188,20 @@ fn display_delete_char() {
 
 #[test]
 fn debug_simple() {
-    let s: TinyAscii16 = TinyAscii16::try_new("hello").unwrap();
+    let s: TinyAscii16 = TinyAscii16::try_from_str("hello").unwrap();
     assert_eq!(format!("{:?}", s), "hello");
 }
 
 #[test]
 fn debug_empty() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     assert_eq!(format!("{:?}", s), "");
 }
 
 #[test]
 fn debug_display_same() {
     // Debug and Display should produce identical output
-    let s: TinyAscii16 = TinyAscii16::try_new("test").unwrap();
+    let s: TinyAscii16 = TinyAscii16::try_from_str("test").unwrap();
     assert_eq!(format!("{:?}", s), format!("{}", s));
 }
 
@@ -211,45 +211,45 @@ fn debug_display_same() {
 
 #[test]
 fn eq_same_capacity() {
-    let a: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
     assert_eq!(a, b);
 }
 
 #[test]
 fn eq_different_content() {
-    let a: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("bar").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("bar").unwrap();
     assert_ne!(a, b);
 }
 
 #[test]
 fn eq_empty_same_capacity() {
-    let a: TinyAscii8 = TinyAscii8::empty();
-    let b: TinyAscii8 = TinyAscii8::empty();
+    let a: TinyAscii8 = TinyAscii8::new();
+    let b: TinyAscii8 = TinyAscii8::new();
     assert_eq!(a, b);
 }
 
 #[test]
 fn eq_full_capacity() {
-    let a: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
-    let b: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
+    let a: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
+    let b: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
     assert_eq!(a, b);
 }
 
 #[test]
 fn eq_zero_len_different_trailing() {
     // Two TinyAscii values with same len but different trailing buffer
-    let a: TinyAscii8 = TinyAscii8::try_new("ab").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("ab").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("ab").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("ab").unwrap();
     // They should be equal because trailing bytes are irrelevant
     assert_eq!(a, b);
 }
 
 #[test]
 fn eq_case_sensitive() {
-    let a: TinyAscii8 = TinyAscii8::try_new("Abc").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("Abc").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     assert_ne!(a, b);
 }
 
@@ -257,7 +257,7 @@ fn eq_case_sensitive() {
 fn eq_all_printable_ascii_range() {
     // All 95 printable ASCII characters
     let printable: TinyAscii128 =
-        TinyAscii128::try_new(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
+        TinyAscii128::try_from_str(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
             .unwrap();
     assert_eq!(
         &*printable,
@@ -271,54 +271,54 @@ fn eq_all_printable_ascii_range() {
 
 #[test]
 fn eq_tinyascii_str() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     assert_eq!(&s, "abc");
 }
 
 #[test]
 fn eq_str_tinyascii() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     assert_eq!("abc", &s);
 }
 
 #[test]
 fn eq_empty_str() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     assert_eq!(&s, "");
     assert_eq!("", &s);
 }
 
 #[test]
 fn eq_empty_tinyascii_empty_str() {
-    let s: TinyAscii8 = TinyAscii8::empty();
+    let s: TinyAscii8 = TinyAscii8::new();
     assert_eq!(&s, "");
     assert_eq!("", &s);
 }
 
 #[test]
 fn eq_different_content_str() {
-    let s: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
     assert_ne!(&s, "bar");
     assert_ne!("bar", &s);
 }
 
 #[test]
 fn eq_different_length() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     assert_ne!(&s, "abcd");
     assert_ne!("abcde", &s);
 }
 
 #[test]
 fn eq_case_sensitive_str() {
-    let a: TinyAscii8 = TinyAscii8::try_new("Abc").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("Abc").unwrap();
     assert_ne!(&a, "abc");
     assert_ne!("Abc", "abc");
 }
 
 #[test]
 fn eq_whitespace() {
-    let s: TinyAscii8 = TinyAscii8::try_new("  ").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("  ").unwrap();
     assert_eq!(&s, "  ");
 }
 
@@ -328,7 +328,7 @@ fn eq_whitespace() {
 
 #[test]
 fn eq_tinyascii_nonnull_ascii_slice() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     let arr = [
         NonNullAscii::SmallA,
         NonNullAscii::SmallB,
@@ -339,7 +339,7 @@ fn eq_tinyascii_nonnull_ascii_slice() {
 
 #[test]
 fn eq_nonnull_ascii_slice_tinyascii() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     let arr = [
         NonNullAscii::SmallA,
         NonNullAscii::SmallB,
@@ -350,7 +350,7 @@ fn eq_nonnull_ascii_slice_tinyascii() {
 
 #[test]
 fn eq_empty_nonnull_slice() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     let arr: [NonNullAscii; 0] = [];
     assert_eq!(s.as_ascii(), &arr[..]);
     assert_eq!(&arr[..], s.as_ascii());
@@ -358,7 +358,7 @@ fn eq_empty_nonnull_slice() {
 
 #[test]
 fn eq_nonnull_slice_different_len() {
-    let s: TinyAscii8 = TinyAscii8::try_new("ab").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("ab").unwrap();
     let arr = [
         NonNullAscii::SmallA,
         NonNullAscii::SmallB,
@@ -373,30 +373,30 @@ fn eq_nonnull_slice_different_len() {
 
 #[test]
 fn ord_same_length() {
-    let a: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("abd").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("abd").unwrap();
     assert!(a < b);
     assert!(b > a);
 }
 
 #[test]
 fn ord_different_length() {
-    let a: TinyAscii8 = TinyAscii8::try_new("a").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("a").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     assert!(a < b);
 }
 
 #[test]
 fn ord_empty_vs_nonempty() {
-    let a: TinyAscii8 = TinyAscii8::empty();
-    let b: TinyAscii8 = TinyAscii8::try_new("a").unwrap();
+    let a: TinyAscii8 = TinyAscii8::new();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("a").unwrap();
     assert!(a < b);
 }
 
 #[test]
 fn ord_equal() {
-    let a: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
     assert!(a <= b);
     assert!(a >= b);
     assert!(a.cmp(&b) == core::cmp::Ordering::Equal);
@@ -404,22 +404,22 @@ fn ord_equal() {
 
 #[test]
 fn ord_lexicographic() {
-    let a: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("abd").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("abd").unwrap();
     assert!(a < b);
 }
 
 #[test]
 fn ord_lowercase_vs_uppercase() {
-    let upper: TinyAscii8 = TinyAscii8::try_new("Z").unwrap();
-    let lower: TinyAscii8 = TinyAscii8::try_new("a").unwrap();
+    let upper: TinyAscii8 = TinyAscii8::try_from_str("Z").unwrap();
+    let lower: TinyAscii8 = TinyAscii8::try_from_str("a").unwrap();
     assert!(upper < lower);
 }
 
 #[test]
 fn partial_ord_consistent() {
-    let a: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("def").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("def").unwrap();
     assert!(a.partial_cmp(&b) == Some(core::cmp::Ordering::Less));
     assert!(b.partial_cmp(&a) == Some(core::cmp::Ordering::Greater));
     assert!(a.partial_cmp(&a) == Some(core::cmp::Ordering::Equal));
@@ -540,14 +540,14 @@ fn try_from_bytes_capacity() {
 
 #[test]
 fn from_tinyascii_to_array() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abcd").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abcd").unwrap();
     let arr: [u8; 8] = s.into();
     assert_eq!(arr[..4], [b'a', b'b', b'c', b'd']);
 }
 
 #[test]
 fn from_tinyascii_empty_to_array() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     let arr: [u8; 4] = s.into();
     // Empty TinyAscii has buf[0] == 0 (is_empty checks this)
     assert_eq!(arr[0], 0);
@@ -555,21 +555,21 @@ fn from_tinyascii_empty_to_array() {
 
 #[test]
 fn from_tinyascii_full_to_array() {
-    let s: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
+    let s: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
     let arr: [u8; 4] = s.into();
     assert_eq!(arr, [b'a', b'b', b'c', b'd']);
 }
 
 #[test]
 fn from_tinyascii_preserves_data() {
-    let s: TinyAscii8 = TinyAscii8::try_new("12345678").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("12345678").unwrap();
     let arr: [u8; 8] = s.into();
     assert_eq!(&arr[..8], b"12345678");
 }
 
 #[test]
 fn into_parts_roundtrip() {
-    let s: TinyAscii16 = TinyAscii16::try_new("hello world!!!").unwrap();
+    let s: TinyAscii16 = TinyAscii16::try_from_str("hello world!!!").unwrap();
     let (arr, len) = s.clone().into_parts();
     let rebuilt = unsafe { TinyAscii16::from_parts(arr, len) };
     assert_eq!(&rebuilt, "hello world!!!");
@@ -577,7 +577,7 @@ fn into_parts_roundtrip() {
 
 #[test]
 fn into_parts_empty_roundtrip() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     let (arr, len) = s.into_parts();
     let rebuilt = unsafe { TinyAscii4::from_parts(arr, len) };
     assert!(rebuilt.is_empty());
@@ -586,7 +586,7 @@ fn into_parts_empty_roundtrip() {
 
 #[test]
 fn into_parts_preserves_capacity() {
-    let s: TinyAscii8 = TinyAscii8::try_new("test").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("test").unwrap();
     let arr: [u8; 8] = s.into();
     assert_eq!(arr.len(), 8);
 }
@@ -597,7 +597,7 @@ fn into_parts_preserves_capacity() {
 
 #[test]
 fn clone_preserves_content() {
-    let s: TinyAscii8 = TinyAscii8::try_new("clone me").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("clone me").unwrap();
     let cloned = s.clone();
     assert_eq!(&*cloned, "clone me");
     assert_eq!(cloned.capacity(), 8);
@@ -605,7 +605,7 @@ fn clone_preserves_content() {
 
 #[test]
 fn clone_empty() {
-    let s: TinyAscii4 = TinyAscii4::empty();
+    let s: TinyAscii4 = TinyAscii4::new();
     let cloned = s.clone();
     assert!(cloned.is_empty());
     assert_eq!(cloned.capacity(), 4);
@@ -613,7 +613,7 @@ fn clone_empty() {
 
 #[test]
 fn clone_is_deep_copy() {
-    let s: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
     let mut cloned = s.clone();
     cloned.try_push_u8(b'x').unwrap();
     assert_eq!(&*s, "abc");
@@ -649,8 +649,8 @@ fn default_is_empty_for_all_sizes() {
 fn hash_equal_values_equal_hash() {
     use core::hash::{Hash, Hasher};
 
-    let a: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
 
     let mut hasher_a = std::hash::DefaultHasher::new();
     a.hash(&mut hasher_a);
@@ -667,8 +667,8 @@ fn hash_equal_values_equal_hash() {
 fn hash_different_values_different_hash() {
     use core::hash::{Hash, Hasher};
 
-    let a: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
-    let b: TinyAscii8 = TinyAscii8::try_new("def").unwrap();
+    let a: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
+    let b: TinyAscii8 = TinyAscii8::try_from_str("def").unwrap();
 
     let mut hasher_a = std::hash::DefaultHasher::new();
     a.hash(&mut hasher_a);
@@ -684,8 +684,8 @@ fn hash_different_values_different_hash() {
 fn hash_empty_consistent() {
     use core::hash::{Hash, Hasher};
 
-    let a: TinyAscii4 = TinyAscii4::empty();
-    let b: TinyAscii8 = TinyAscii8::empty();
+    let a: TinyAscii4 = TinyAscii4::new();
+    let b: TinyAscii8 = TinyAscii8::new();
 
     let mut hasher_a = std::hash::DefaultHasher::new();
     a.hash(&mut hasher_a);
@@ -703,7 +703,7 @@ fn hash_empty_consistent() {
 
 #[test]
 fn eq_space_only() {
-    let s: TinyAscii8 = TinyAscii8::try_new(" ").unwrap();
+    let s: TinyAscii8 = TinyAscii8::try_from_str(" ").unwrap();
     assert_eq!(&s, " ");
 }
 
@@ -741,7 +741,7 @@ fn eq_delete_char_in_string() {
 
 #[test]
 fn eq_max_len_for_capacity() {
-    let s: TinyAscii4 = TinyAscii4::try_new("abcd").unwrap();
+    let s: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
     assert_eq!(&s, "abcd");
     assert_eq!(s.len(), 4);
     assert_eq!(s.capacity(), 4);
@@ -749,8 +749,8 @@ fn eq_max_len_for_capacity() {
 
 #[test]
 fn ord_max_len_vs_shorter() {
-    let short: TinyAscii8 = TinyAscii8::try_new("abc").unwrap();
-    let long: TinyAscii8 = TinyAscii8::try_new("abcd").unwrap();
+    let short: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
+    let long: TinyAscii8 = TinyAscii8::try_from_str("abcd").unwrap();
     assert!(short < long);
 }
 
@@ -766,80 +766,80 @@ mod std_tests {
 
     #[test]
     fn as_ref_path() {
-        let s: TinyAscii8 = TinyAscii8::try_new("tmp").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("tmp").unwrap();
         let path: &std::path::Path = s.as_ref();
         assert_eq!(path, std::path::Path::new("tmp"));
     }
 
     #[test]
     fn as_ref_path_relative() {
-        let s: TinyAscii8 = TinyAscii8::try_new("foo").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
         let path: &std::path::Path = s.as_ref();
         assert_eq!(path, std::path::Path::new("foo"));
     }
 
     #[test]
     fn as_ref_os_str() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let os: &std::ffi::OsStr = s.as_ref();
         assert_eq!(os, std::ffi::OsStr::new("hello"));
     }
 
     #[test]
     fn eq_path() {
-        let s: TinyAscii8 = TinyAscii8::try_new("test").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("test").unwrap();
         assert_eq!(s, PathBuf::from("test"));
     }
 
     #[test]
     fn eq_path_not_equal() {
-        let s: TinyAscii8 = TinyAscii8::try_new("test").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("test").unwrap();
         assert_ne!(s, PathBuf::from("other"));
     }
 
     #[test]
     fn eq_pathbuf() {
-        let s: TinyAscii8 = TinyAscii8::try_new("test").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("test").unwrap();
         let pb = PathBuf::from("test");
         assert_eq!(s, pb);
     }
 
     #[test]
     fn eq_pathbuf_not_equal() {
-        let s: TinyAscii8 = TinyAscii8::try_new("test").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("test").unwrap();
         let pb = PathBuf::from("other");
         assert_ne!(s, pb);
     }
 
     #[test]
     fn eq_path_str() {
-        let s: TinyAscii8 = TinyAscii8::try_new("test").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("test").unwrap();
         assert_eq!("test", &s);
     }
 
     #[test]
     fn eq_os_string() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let os = std::ffi::OsStr::new("hello");
         assert_eq!(std::ffi::OsStr::new(s.as_str()), os);
     }
 
     #[test]
     fn eq_os_string_not_equal() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let os = std::ffi::OsStr::new("world");
         assert_ne!(std::ffi::OsStr::new(s.as_str()), os);
     }
 
     #[test]
     fn pathbuf_eq_reverse() {
-        let s: TinyAscii8 = TinyAscii8::try_new("test").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("test").unwrap();
         assert_eq!(PathBuf::from("test"), s);
     }
 
     #[test]
     fn os_str_eq_reverse() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let os = std::ffi::OsStr::new("hello");
         assert_eq!(os, &*s);
     }
@@ -853,11 +853,14 @@ mod std_tests {
         use std::collections::HashMap;
 
         let mut map = HashMap::<TinyAscii8, i32>::new();
-        let key = TinyAscii8::try_new("aaa").unwrap();
+        let key = TinyAscii8::try_from_str("aaa").unwrap();
         map.insert(key, 17);
 
         assert_eq!(map.get("aaa"), Some(&17));
-        assert_eq!(map.get(&TinyAscii8::try_new("aaa").unwrap()), Some(&17));
+        assert_eq!(
+            map.get(&TinyAscii8::try_from_str("aaa").unwrap()),
+            Some(&17)
+        );
     }
 
     #[test]
@@ -865,8 +868,8 @@ mod std_tests {
         use std::collections::HashSet;
 
         let mut set = HashSet::<TinyAscii8>::new();
-        set.insert(TinyAscii8::try_new("a").unwrap());
-        set.insert(TinyAscii8::try_new("b").unwrap());
+        set.insert(TinyAscii8::try_from_str("a").unwrap());
+        set.insert(TinyAscii8::try_from_str("b").unwrap());
 
         assert!(set.contains("a"));
         assert!(set.contains("b"));
@@ -878,9 +881,9 @@ mod std_tests {
         use alloc::collections::BTreeMap;
 
         let mut map = BTreeMap::<TinyAscii8, &str>::new();
-        map.insert(TinyAscii8::try_new("c").unwrap(), "third");
-        map.insert(TinyAscii8::try_new("a").unwrap(), "first");
-        map.insert(TinyAscii8::try_new("b").unwrap(), "second");
+        map.insert(TinyAscii8::try_from_str("c").unwrap(), "third");
+        map.insert(TinyAscii8::try_from_str("a").unwrap(), "first");
+        map.insert(TinyAscii8::try_from_str("b").unwrap(), "second");
 
         assert_eq!(map.get("a"), Some(&"first"));
         assert_eq!(map.get("b"), Some(&"second"));
@@ -896,9 +899,9 @@ mod std_tests {
         use alloc::collections::BTreeSet;
 
         let mut set = BTreeSet::<TinyAscii8>::new();
-        set.insert(TinyAscii8::try_new("c").unwrap());
-        set.insert(TinyAscii8::try_new("a").unwrap());
-        set.insert(TinyAscii8::try_new("b").unwrap());
+        set.insert(TinyAscii8::try_from_str("c").unwrap());
+        set.insert(TinyAscii8::try_from_str("a").unwrap());
+        set.insert(TinyAscii8::try_from_str("b").unwrap());
 
         let items: Vec<&str> = set.iter().map(core::convert::AsRef::as_ref).collect();
         assert_eq!(items, vec!["a", "b", "c"]);
@@ -917,56 +920,56 @@ mod alloc_tests {
 
     #[test]
     fn eq_cow_str_borrowed() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let cow: Cow<str> = Cow::Borrowed("hello");
         assert_eq!(s, cow);
     }
 
     #[test]
     fn eq_cow_str_owned() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let cow: Cow<str> = Cow::Owned("hello".to_string());
         assert_eq!(s, cow);
     }
 
     #[test]
     fn eq_cow_str_not_equal() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let cow: Cow<str> = Cow::Borrowed("world");
         assert_ne!(s, cow);
     }
 
     #[test]
     fn eq_cow_str_reverse() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let cow: Cow<str> = Cow::Borrowed("hello");
         assert_eq!(cow, s);
     }
 
     #[test]
     fn eq_string() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let str_val: String = "hello".to_string();
         assert_eq!(s, str_val);
     }
 
     #[test]
     fn eq_string_not_equal() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let str_val: String = "world".to_string();
         assert_ne!(s, str_val);
     }
 
     #[test]
     fn eq_string_reverse() {
-        let s: TinyAscii8 = TinyAscii8::try_new("hello").unwrap();
+        let s: TinyAscii8 = TinyAscii8::try_from_str("hello").unwrap();
         let str_val: String = "hello".to_string();
         assert_eq!(str_val, s);
     }
 
     #[test]
     fn eq_empty_string() {
-        let s: TinyAscii8 = TinyAscii8::empty();
+        let s: TinyAscii8 = TinyAscii8::new();
         let str_val: String = String::new();
         assert_eq!(s, str_val);
     }
@@ -974,7 +977,7 @@ mod alloc_tests {
     #[test]
     fn from_tinyascii_to_cow() {
         use alloc::borrow::Cow;
-        let s: TinyAscii4 = TinyAscii4::try_new("hi").unwrap();
+        let s: TinyAscii4 = TinyAscii4::try_from_str("hi").unwrap();
         let cow: Cow<str> = s.as_str().into();
         assert_eq!(cow, "hi");
     }
@@ -982,7 +985,7 @@ mod alloc_tests {
     #[test]
     fn from_tinyascii_empty_to_cow() {
         use alloc::borrow::Cow;
-        let s: TinyAscii4 = TinyAscii4::empty();
+        let s: TinyAscii4 = TinyAscii4::new();
         let cow: Cow<str> = s.as_str().into();
         assert_eq!(cow, "");
     }

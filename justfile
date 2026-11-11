@@ -6,6 +6,15 @@ set default-list
     cargo build --features std
     cargo build --features dep_tinystr
     cargo build --features dep_ascii
+    cargo build --all-features
+
+[group('doc')]
+@doc:
+    cargo doc --all-features
+
+[group('doc')]
+@doc-open:
+    python -m http.server 9030 -d target/doc
 
 [group('test')]
 [positional-arguments]

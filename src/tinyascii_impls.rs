@@ -77,7 +77,7 @@ impl<const N: usize> BorrowMut<[NonNullAscii]> for TinyAscii<N> {
 
 impl<const N: usize> Default for TinyAscii<N> {
     fn default() -> Self {
-        Self::empty()
+        Self::new()
     }
 }
 
@@ -211,7 +211,7 @@ impl<const N: usize> FromStr for TinyAscii<N> {
     type Err = WriteAsciiError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::try_new(s)
+        Self::try_from_str(s)
     }
 }
 
@@ -219,7 +219,7 @@ impl<'a, const N: usize> TryFrom<&'a str> for TinyAscii<N> {
     type Error = WriteAsciiError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Self::try_new(value)
+        Self::try_from_bytes(value.as_bytes())
     }
 }
 

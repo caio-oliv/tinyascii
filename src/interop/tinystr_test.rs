@@ -155,7 +155,7 @@ fn tinyascii_to_tinyascii_str_from_ascii_array_roundtrip() {
 
 #[test]
 fn tinyascii_str_from_tinyascii_empty() {
-    let tinyascii = TinyAscii::<8>::empty();
+    let tinyascii = TinyAscii::<8>::new();
     let tinystr: TinyAsciiStr<8> = TinyAsciiStr::from(tinyascii);
     assert_eq!(tinystr.as_str(), "");
     assert_eq!(tinystr.len(), 0);
@@ -163,7 +163,7 @@ fn tinyascii_str_from_tinyascii_empty() {
 
 #[test]
 fn tinyascii_str_from_tinyascii_full_capacity() {
-    let tinyascii = TinyAscii::<4>::try_new("abcd").unwrap();
+    let tinyascii = TinyAscii::<4>::try_from_str("abcd").unwrap();
     let tinystr: TinyAsciiStr<4> = TinyAsciiStr::from(tinyascii);
     assert_eq!(tinystr.as_str(), "abcd");
     assert_eq!(tinystr.len(), 4);
@@ -171,7 +171,7 @@ fn tinyascii_str_from_tinyascii_full_capacity() {
 
 #[test]
 fn tinyascii_str_from_tinyascii_partial() {
-    let tinyascii = TinyAscii::<8>::try_new("abc").unwrap();
+    let tinyascii = TinyAscii::<8>::try_from_str("abc").unwrap();
     let tinystr: TinyAsciiStr<8> = TinyAsciiStr::from(tinyascii);
     assert_eq!(tinystr.as_str(), "abc");
     assert_eq!(tinystr.len(), 3);
@@ -179,7 +179,7 @@ fn tinyascii_str_from_tinyascii_partial() {
 
 #[test]
 fn tinyascii_str_from_tinyascii_roundtrip() {
-    let original = TinyAscii::<16>::try_new("roundtrip test").unwrap();
+    let original = TinyAscii::<16>::try_from_str("roundtrip test").unwrap();
     let expected = original.as_str().to_owned();
     let tinystr: TinyAsciiStr<16> = TinyAsciiStr::from(original);
     let back: TinyAscii<16> = TinyAscii::from(tinystr);
@@ -190,7 +190,7 @@ fn tinyascii_str_from_tinyascii_roundtrip() {
 
 #[test]
 fn tinyascii_str_from_tinyascii_preserves_all_bytes() {
-    let tinyascii = TinyAscii::<8>::try_new("12345678").unwrap();
+    let tinyascii = TinyAscii::<8>::try_from_str("12345678").unwrap();
     let tinystr: TinyAsciiStr<8> = TinyAsciiStr::from(tinyascii);
     // TinyAsciiStr stores all N bytes; verify content
     assert_eq!(tinystr.len(), 8);
@@ -285,7 +285,7 @@ fn tinyascii_to_tinyascii_str_trailing_null_in_tinystr() {
 
 #[test]
 fn tinyascii_str_from_empty_then_fill() {
-    let tinyascii = TinyAscii::<8>::empty();
+    let tinyascii = TinyAscii::<8>::new();
     let tinystr: TinyAsciiStr<8> = TinyAsciiStr::from(tinyascii);
     assert!(tinystr.as_str().is_empty());
 
