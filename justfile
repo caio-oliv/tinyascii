@@ -20,12 +20,13 @@ set default-list
 [positional-arguments]
 @test:
     cargo test --all-features "$@"
+    RUSTFLAGS="-C target_feature=+avx2" cargo test --all-features "$@"
 
 [group('test')]
 [positional-arguments]
-[env("RUSTFLAGS", "-C target_feature=+avx2")]
-@test-avx2:
-    @just test "$@"
+@test-miri:
+    MIRIFLAGS="-Zmiri-strict-provenance" cargo +nightly miri test --all-features --lib "$@"
+    RUSTFLAGS="-C target_feature=+avx2" MIRIFLAGS="-Zmiri-strict-provenance" cargo +nightly miri test --all-features --lib "$@"
 
 [group('test')]
 @test-cov:

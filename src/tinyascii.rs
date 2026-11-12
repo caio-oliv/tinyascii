@@ -871,11 +871,12 @@ impl<const N: usize> TinyAscii<N> {
             // ahead. This is safe because sufficient capacity is ensured by checks
             // above.
             unsafe {
+                let ptr = self.buf.as_mut_ptr();
                 core::ptr::copy(
                     // `buf` is valid for reads from `idx` up to `len - idx`.
-                    self.buf.as_ptr().add(idx),
+                    ptr.cast_const().add(idx),
                     // `buf` is valid for writes from `idx + 1` up to `len - idx`.
-                    self.buf.as_mut_ptr().add(idx + 1),
+                    ptr.add(idx + 1),
                     len - idx,
                 );
             }
@@ -955,11 +956,12 @@ impl<const N: usize> TinyAscii<N> {
         // SAFETY: Move the bytes starting from `idx` to their new location `ascii.len()` bytes
         // ahead. This is safe because sufficient capacity is ensured.
         unsafe {
+            let ptr = self.buf.as_mut_ptr();
             core::ptr::copy(
                 // `buf` is valid for reads from `idx` up to `len - idx`.
-                self.buf.as_ptr().add(idx),
+                ptr.cast_const().add(idx),
                 // `buf` is valid for writes from `idx + ascii.len()` up to `len - idx`.
-                self.buf.as_mut_ptr().add(idx + ascii.len()),
+                ptr.add(idx + ascii.len()),
                 len - idx,
             );
         }
@@ -1064,11 +1066,8 @@ impl<const N: usize> TinyAscii<N> {
         // - `count <= self.available_capacity()` guarantees that `dst.len() >= count`
         // so `dst` is valid for `count` writes
         unsafe {
-            core::ptr::copy_nonoverlapping(
-                self.buf.as_ptr().add(range.start),
-                self.buf.as_mut_ptr().add(len),
-                count,
-            );
+            let ptr = self.buf.as_mut_ptr();
+            core::ptr::copy_nonoverlapping(ptr.cast_const().add(range.start), ptr.add(len), count);
         }
 
         Ok(())
@@ -1165,9 +1164,10 @@ impl<const N: usize> TinyAscii<N> {
             // - `dst` can be written up to `ajust_count`, as `new_len <= N` was checked above.
             // - `ptr::copy` supports overlapping ranges.
             unsafe {
+                let ptr = self.buf.as_mut_ptr();
                 core::ptr::copy(
-                    self.buf.as_ptr().add(arange.end),
-                    self.buf.as_mut_ptr().add(arange.start + replace_with.len()),
+                    ptr.cast_const().add(arange.end),
+                    ptr.add(arange.start + replace_with.len()),
                     adjust_count,
                 );
             }
@@ -1252,9 +1252,10 @@ impl<const N: usize> TinyAscii<N> {
         // - `src` can be read up to `len - arange.end`
         // - `dst` can be written up to `len - arange.end`
         unsafe {
+            let ptr = self.buf.as_mut_ptr();
             core::ptr::copy(
-                self.buf.as_ptr().add(arange.end),
-                self.buf.as_mut_ptr().add(arange.start),
+                ptr.cast_const().add(arange.end),
+                ptr.add(arange.start),
                 len - arange.end,
             );
         }
