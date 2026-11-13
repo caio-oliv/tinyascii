@@ -5,6 +5,7 @@ use core::arch::x86::*;
 
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
+use core::mem::MaybeUninit;
 
 use crate::ascii::NonNullAscii;
 use crate::tinyascii::MAX_LEN;
@@ -94,7 +95,7 @@ pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
     }
 
     if len == 1 {
-        return NonNullAscii::is_valid_u8(unsafe { *ptr });
+        return NonNullAscii::is_valid_u8(unsafe { ptr.read() });
     }
 
     true
@@ -111,7 +112,7 @@ pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
 /// Same sefety requirements as [`crate::simd::copy_valid_tinyascii`].
 #[inline]
 #[target_feature(enable = "avx2")]
-pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
+pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) -> bool {
     // SAFETY: `src` length is less or equal than `N` as ensured
     // by the caller.
     unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
@@ -133,14 +134,15 @@ pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
         let m = unsafe {
             let a0 = _mm256_loadu_si256(s_ptr.cast());
             let a1 = _mm256_loadu_si256(s_ptr.add(32).cast());
-            let b1 = _mm256_loadu_si256(s_ptr.add(len - 64).cast());
-            let b0 = _mm256_loadu_si256(s_ptr.add(len - 32).cast());
+            let m0 = _mm256_or_si256(invalid_mask_256(a0), invalid_mask_256(a1));
             _mm256_storeu_si256(d_ptr.cast(), a0);
             _mm256_storeu_si256(d_ptr.add(32).cast(), a1);
+
+            let b1 = _mm256_loadu_si256(s_ptr.add(len - 64).cast());
+            let b0 = _mm256_loadu_si256(s_ptr.add(len - 32).cast());
+            let m1 = _mm256_or_si256(invalid_mask_256(b1), invalid_mask_256(b0));
             _mm256_storeu_si256(d_ptr.add(len - 64).cast(), b1);
             _mm256_storeu_si256(d_ptr.add(len - 32).cast(), b0);
-            let m0 = _mm256_or_si256(invalid_mask_256(a0), invalid_mask_256(a1));
-            let m1 = _mm256_or_si256(invalid_mask_256(b1), invalid_mask_256(b0));
             _mm256_or_si256(m0, m1)
         };
         return _mm256_testz_si256(m, m) != 0;
@@ -215,11 +217,9 @@ pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
 
     if len == 1 {
         // SAFETY: `len == 1`, so index 0 is in bounds of `src` and `dst`.
-        let b = unsafe {
-            let b = *s_ptr;
-            *d_ptr = b;
-            b
-        };
+        let b = unsafe { s_ptr.read() };
+        // SAFETY: `len == 1`, so index 0 is in bounds of `src` and `dst`.
+        unsafe { d_ptr.cast::<u8>().write(b) };
         return NonNullAscii::is_valid_u8(b);
     }
 
@@ -254,7 +254,11 @@ fn has_invalid_u32(x: u32) -> bool {
 /// Same sefety requirements as [`crate::simd::fill_ascii`].
 #[inline]
 #[target_feature(enable = "avx2")]
-pub(super) unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNullAscii) {
+pub(super) unsafe fn fill_ascii(
+    src: &[u8],
+    dst: &mut [MaybeUninit<u8>],
+    replacement: NonNullAscii,
+) {
     // SAFETY: `src` length is less or equal than `N` as ensured
     // by the caller.
     unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
@@ -375,12 +379,13 @@ pub(super) unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNull
     if len == 1 {
         // SAFETY: `len == 1`, so index 0 is in bounds of `src` and `dst`.
         unsafe {
-            let b = *s_ptr;
-            *d_ptr = if NonNullAscii::is_valid_u8(b) {
+            let b = s_ptr.read();
+            let valid = if NonNullAscii::is_valid_u8(b) {
                 b
             } else {
                 repl
             };
+            d_ptr.cast::<u8>().write(valid);
         }
     }
 }

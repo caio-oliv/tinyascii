@@ -1,6 +1,8 @@
 mod avx2;
 mod scalar;
 
+use core::mem::MaybeUninit;
+
 use crate::ascii::NonNullAscii;
 
 /// Check if `src` is valid [`TinyAscii`] content.
@@ -35,7 +37,7 @@ pub unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
 ///
 /// Failing to uphold those invariants will cause a write out of bounds.
 #[inline]
-pub unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
+pub unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) -> bool {
     cfg_select! {
         target_feature = "avx2" => {
             // SAFETY:
@@ -60,17 +62,17 @@ pub unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
 ///
 /// Failing to uphold those invariants will cause a write out of bounds.
 #[inline]
-pub unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNullAscii) {
+pub unsafe fn fill_ascii(src: &[u8], dst: &mut [MaybeUninit<u8>], replacement: NonNullAscii) {
     cfg_select! {
         target_feature = "avx2" => {
             // SAFETY:
             // 1. AVX2 version has same safety requirements as `self::fill_ascii`
             // 2. `fill_ascii` requires target_feature avx2 enabled
-            unsafe { avx2::fill_ascii(dst, src, replacement) }
+            unsafe { avx2::fill_ascii(src, dst, replacement) }
         }
         _ => {
             // SAFETY: scalar version has same safety requirements as `self::fill_ascii`
-            unsafe { scalar::fill_ascii(dst, src, replacement) }
+            unsafe { scalar::fill_ascii(src, dst, replacement) }
         }
     }
 }

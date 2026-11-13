@@ -31,6 +31,29 @@ impl CtorScenario {
         }
     }
 
+    pub fn almost_fill_ascii<R: Rng>(rng: &mut R, len: usize) -> Self {
+        let text = sample_ascii_string(rng, len - 7);
+
+        assert_matches!(TinyAscii::<128>::try_from_str(&text), Ok(_));
+
+        Self {
+            name: "almost_fill_ascii",
+            text,
+        }
+    }
+
+    pub fn fill_30_ascii<R: Rng>(rng: &mut R, len: usize) -> Self {
+        let text_len = unsafe { (len as f32 * 0.30).to_int_unchecked::<usize>().max(1) };
+        let text = sample_ascii_string(rng, text_len);
+
+        assert_matches!(TinyAscii::<128>::try_from_str(&text), Ok(_));
+
+        Self {
+            name: "fill_30_ascii",
+            text,
+        }
+    }
+
     pub fn fill_non_ascii<R: Rng>(rng: &mut R, len: usize) -> Self {
         let text = sample_non_ascii_string(rng, len);
 
@@ -62,17 +85,13 @@ pub fn run_scenarios<const N: usize, R>(
     g.finish();
 }
 
-fn try_from_str<const N: usize>(c: &mut Criterion) {
-    let mut rng = common::rng();
-    let scenarios = [CtorScenario::fill_ascii(&mut rng, N)];
-    run_scenarios::<N, _>(c, "try_from_str", &scenarios, |sc| {
-        TinyAscii::<N>::try_from_str(&sc.text)
-    });
-}
-
 fn try_from_bytes<const N: usize>(c: &mut Criterion) {
     let mut rng = common::rng();
-    let scenarios = [CtorScenario::fill_ascii(&mut rng, N)];
+    let scenarios = [
+        CtorScenario::fill_ascii(&mut rng, N),
+        CtorScenario::almost_fill_ascii(&mut rng, N),
+        CtorScenario::fill_30_ascii(&mut rng, N),
+    ];
     run_scenarios::<N, _>(c, "try_from_bytes", &scenarios, |sc| {
         TinyAscii::<N>::try_from_bytes(sc.text.as_bytes())
     });
@@ -83,6 +102,8 @@ fn from_ascii_lossy<const N: usize>(c: &mut Criterion) {
     let scenarios = [
         CtorScenario::fill_ascii(&mut rng, N),
         CtorScenario::fill_non_ascii(&mut rng, N),
+        CtorScenario::almost_fill_ascii(&mut rng, N),
+        CtorScenario::fill_30_ascii(&mut rng, N),
     ];
     run_scenarios::<N, _>(c, "from_ascii_lossy", &scenarios, |sc| {
         TinyAscii::<N>::from_ascii_lossy(sc.text.as_bytes(), black_box(REPLACEMENT))
@@ -90,7 +111,6 @@ fn from_ascii_lossy<const N: usize>(c: &mut Criterion) {
 }
 
 fn all(c: &mut Criterion) {
-    each_cap!(try_from_str, c, <8, 32, 64, 128>);
     each_cap!(try_from_bytes, c, <8, 32, 64, 128>);
     each_cap!(from_ascii_lossy, c, <8, 32, 64, 128>);
 }

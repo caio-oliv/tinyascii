@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+use core::mem::MaybeUninit;
+
 use crate::ascii::NonNullAscii;
 use crate::tinyascii::MAX_LEN;
 
@@ -28,7 +30,7 @@ pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
 ///
 /// Same sefety requirements as [`crate::simd::copy_valid_tinyascii`].
 #[inline(always)]
-pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
+pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) -> bool {
     // SAFETY: `src` length is less or equal than `N` as ensured
     // by the caller.
     unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
@@ -40,7 +42,7 @@ pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
     let mut acc = 1u8;
     for (idx, b) in src.iter().copied().enumerate() {
         acc &= NonNullAscii::is_valid_u8(b) as u8;
-        dst[idx] = b;
+        dst[idx].write(b);
     }
 
     acc != 0
@@ -52,7 +54,11 @@ pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [u8]) -> bool {
 ///
 /// Same sefety requirements as [`crate::simd::fill_ascii`].
 #[inline(always)]
-pub(super) unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNullAscii) {
+pub(super) unsafe fn fill_ascii(
+    src: &[u8],
+    dst: &mut [MaybeUninit<u8>],
+    replacement: NonNullAscii,
+) {
     // SAFETY: `src` length is less or equal than `N` as ensured
     // by the caller.
     unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
@@ -69,6 +75,8 @@ pub(super) unsafe fn fill_ascii(dst: &mut [u8], src: &[u8], replacement: NonNull
         };
 
         // SAFETY: `idx` is withing bounds of `dst` slice
-        *unsafe { dst.get_unchecked_mut(idx) } = val;
+        unsafe {
+            dst.get_unchecked_mut(idx).write(val);
+        }
     }
 }

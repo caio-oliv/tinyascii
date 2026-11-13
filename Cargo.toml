@@ -30,9 +30,18 @@ rand = "0.10.3"
 
 [lints.rust]
 missing_docs = "warn"
-missing_crate_level_docs = "warn"
 
 [lints.clippy]
+std_instead_of_core = "deny"
+std_instead_of_alloc = "deny"
+alloc_instead_of_core = "deny"
+missing_panics_doc = "deny"
+missing_safety_doc = "deny"
+undocumented_unsafe_blocks = "deny"
+transmute_undefined_repr = "deny"
+get_unwrap = "deny"
+unwrap_used = "deny"
+
 manual_let_else = "warn"
 redundant_else = "warn"
 match_same_arms = "warn"
@@ -44,17 +53,7 @@ doc_broken_link = "warn"
 doc_include_without_cfg = "warn"
 doc_link_with_quotes = "warn"
 doc_paragraphs_missing_punctuation = "warn"
-
-missing_panics_doc = "deny"
-missing_safety_doc = "deny"
-undocumented_unsafe_blocks = "deny"
-transmute_undefined_repr = "deny"
-get_unwrap = "deny"
-unwrap_used = "deny"
-
-std_instead_of_core = "deny"
-std_instead_of_alloc = "deny"
-alloc_instead_of_core = "deny"
+missing_errors_doc = "warn"
 
 [[bench]]
 name = "tinyascii_ctor_bench"

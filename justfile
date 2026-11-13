@@ -16,6 +16,11 @@ set default-list
 @doc-open:
     python -m http.server 9030 -d target/doc
 
+[group('lint')]
+[positional-arguments]
+@lint:
+    cargo clippy "$@"
+
 [group('test')]
 [positional-arguments]
 @test:
@@ -36,6 +41,11 @@ set default-list
 [group('test')]
 @test-cov-open:
     python -m http.server 9010 -d target/llvm-cov/html
+
+@bench base='main':
+    cargo bench --bench tinyascii_ctor_bench -- --save-baseline {{ base }}
+    cargo bench --bench tinyascii_mutation_bench -- --save-baseline {{ base }}
+    cargo bench --bench tinyascii_range_bench -- --save-baseline {{ base }}
 
 @bench-compare feature base='main':
     git switch {{ base }}
