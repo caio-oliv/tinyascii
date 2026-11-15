@@ -9,7 +9,7 @@ use crate::tinyascii::MAX_LEN;
 ///
 /// # Safety
 ///
-/// Same sefety requirements as [`crate::simd::is_valid_tinyascii`].
+/// Same safety requirements as [`crate::simd::is_valid_tinyascii`].
 #[inline(always)]
 pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
     // SAFETY: `src` length is less or equal than `N` as ensured
@@ -28,7 +28,7 @@ pub(super) unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
 ///
 /// # Safety
 ///
-/// Same sefety requirements as [`crate::simd::copy_valid_tinyascii`].
+/// Same safety requirements as [`crate::simd::copy_valid_tinyascii`].
 #[inline(always)]
 pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) -> bool {
     // SAFETY: `src` length is less or equal than `N` as ensured
@@ -48,11 +48,34 @@ pub(super) unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>
     acc != 0
 }
 
+/// Scalar version of [`crate::simd::copy_tinyascii`].
+///
+/// # Safety
+///
+/// Same safety requirements as [`crate::simd::copy_tinyascii`].
+pub(super) unsafe fn copy_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) {
+    // SAFETY: `src` length is less or equal than `N` as ensured
+    // by the caller.
+    unsafe { core::hint::assert_unchecked(MAX_LEN >= src.len()) };
+
+    // SAFETY: `dst` length is greater or equal than `src` length
+    // as ensured by the caller.
+    unsafe { core::hint::assert_unchecked(dst.len() >= src.len()) };
+
+    // SAFETY:
+    // - `src` is valid for reads up to `src.len()`
+    // - `dst` is valid for writes up to `src.len()` as ensured by the caller
+    // - `src` and `dst` are distinct borrows and do not overlap
+    unsafe {
+        core::ptr::copy_nonoverlapping(src.as_ptr(), dst.as_mut_ptr().cast(), src.len());
+    }
+}
+
 /// Scalar version of [`crate::simd::fill_ascii`].
 ///
 /// # Safety
 ///
-/// Same sefety requirements as [`crate::simd::fill_ascii`].
+/// Same safety requirements as [`crate::simd::fill_ascii`].
 #[inline(always)]
 pub(super) unsafe fn fill_ascii(
     src: &[u8],

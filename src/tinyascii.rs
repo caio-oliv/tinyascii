@@ -78,6 +78,51 @@ impl<const N: usize> TinyAscii<N> {
         this
     }
 
+    /// Creates a new [`TinyAscii`] from a byte slice `&[u8]`.
+    ///
+    /// The byte slice must contain only non-null ASCII characters and
+    /// length less than capacity (`N`).
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that:
+    ///
+    /// * `bytes.len()` is less or equal than `N`.
+    /// * All bytes (`u8`) must be valid [`NonNullAscii`] characters.
+    ///
+    /// Use the safe version, [`try_from_bytes`], if bytes may be invalid.
+    ///
+    /// Violating these requirements **will** cause UB.
+    ///
+    /// [`try_from_bytes`]: TinyAscii::try_from_bytes
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::TinyAscii32;
+    /// let s = unsafe { TinyAscii32::from_bytes_unchecked("Hello world!".as_bytes()) };
+    /// assert_eq!(&s, "Hello world!");
+    /// ```
+    pub unsafe fn from_bytes_unchecked(bytes: &[u8]) -> Self {
+        const { assert_capacity::<N>() }
+        let mut tiny = Self::new();
+
+        // SAFETY: Caller must ensure `bytes.len()` is less or equal
+        // than `N`.
+        unsafe { tiny.set_len(bytes.len()) };
+
+        // SAFETY:
+        // - `bytes.len()` is is less or equal than `N` as
+        // ensured by the caller
+        // - `tiny.buf.len()` is greater or equal than `bytes`
+        // length as ensured by the caller
+        unsafe {
+            crate::simd::copy_tinyascii(bytes, &mut tiny.buf);
+        }
+
+        tiny
+    }
+
     /// Creates a new [`TinyAscii`] from a `&str`.
     ///
     /// The `&str` must contain only non-null ASCII characters and

@@ -125,6 +125,154 @@ fn try_from_bytes_various() {
 }
 
 // ---------------------------------------------------------------------------
+// from_bytes_unchecked
+// ---------------------------------------------------------------------------
+
+#[test]
+fn from_bytes_unchecked_basic() {
+    let s = unsafe { TinyAscii32::from_bytes_unchecked(b"Hello world!") };
+    assert_eq!(&s, "Hello world!");
+    assert_eq!(s.len(), 12);
+    assert_eq!(s.as_bytes(), b"Hello world!");
+}
+
+#[test]
+fn from_bytes_unchecked_empty() {
+    let s = unsafe { TinyAscii4::from_bytes_unchecked(&[]) };
+    assert!(s.is_empty());
+    assert!(!s.is_full());
+    assert_eq!(s.len(), 0);
+    assert_eq!(&s, "");
+}
+
+#[test]
+fn from_bytes_unchecked_single_byte() {
+    let s = unsafe { TinyAscii4::from_bytes_unchecked(b"a") };
+    assert_eq!(&s, "a");
+    assert_eq!(s.len(), 1);
+    assert_eq!(s.available_capacity(), 3);
+}
+
+#[test]
+fn from_bytes_unchecked_full() {
+    let s = unsafe { TinyAscii4::from_bytes_unchecked(b"abcd") };
+    assert_eq!(&s, "abcd");
+    assert!(s.is_full());
+    assert_eq!(s.len(), 4);
+    assert_eq!(s.available_capacity(), 0);
+}
+
+#[test]
+fn from_bytes_unchecked_one_below_full() {
+    let s = unsafe { TinyAscii4::from_bytes_unchecked(b"abc") };
+    assert_eq!(&s, "abc");
+    assert!(!s.is_full());
+    assert_eq!(s.len(), 3);
+    assert_eq!(s.available_capacity(), 1);
+}
+
+#[test]
+fn from_bytes_unchecked_max_capacity() {
+    let bytes = [b'x'; MAX_LEN];
+    let s = unsafe { TinyAscii128::from_bytes_unchecked(&bytes) };
+    assert!(s.is_full());
+    assert_eq!(s.len(), MAX_LEN);
+    assert_eq!(s.as_bytes(), &bytes);
+
+    let s = unsafe { TinyAscii128::from_bytes_unchecked(&bytes[..MAX_LEN - 1]) };
+    assert!(!s.is_full());
+    assert_eq!(s.len(), MAX_LEN - 1);
+    assert_eq!(s.as_bytes(), &bytes[..MAX_LEN - 1]);
+}
+
+#[test]
+fn from_bytes_unchecked_all_lengths() {
+    // Exercises every length (including SIMD block boundaries) for several capacities.
+    let src: [u8; MAX_LEN] = core::array::from_fn(|i| b'!' + u8::try_from(i % 90).unwrap());
+
+    macro_rules! check {
+        ($ty:ty, $n:expr) => {
+            for len in 0..=$n {
+                let s = unsafe { <$ty>::from_bytes_unchecked(&src[..len]) };
+                assert_eq!(s.len(), len);
+                assert_eq!(s.as_bytes(), &src[..len]);
+                assert_eq!(s.is_full(), len == $n);
+            }
+        };
+    }
+
+    check!(TinyAscii4, 4);
+    check!(TinyAscii8, 8);
+    check!(TinyAscii16, 16);
+    check!(TinyAscii32, 32);
+    check!(TinyAscii64, 64);
+    check!(TinyAscii128, 128);
+}
+
+#[test]
+fn from_bytes_unchecked_odd_capacities() {
+    let s = unsafe { TinyAscii::<1>::from_bytes_unchecked(b"z") };
+    assert_eq!(&s, "z");
+    assert!(s.is_full());
+
+    let s = unsafe { TinyAscii::<1>::from_bytes_unchecked(b"") };
+    assert!(s.is_empty());
+
+    let s = unsafe { TinyAscii::<7>::from_bytes_unchecked(b"abcdefg") };
+    assert_eq!(&s, "abcdefg");
+
+    let s = unsafe { TinyAscii::<33>::from_bytes_unchecked(b"0123456789abcdef0123456789abcdef") };
+    assert_eq!(&s, "0123456789abcdef0123456789abcdef");
+    assert_eq!(s.len(), 32);
+    assert!(!s.is_full());
+}
+
+#[test]
+fn from_bytes_unchecked_matches_try_from_bytes() {
+    let inputs: [&[u8]; 5] = [b"", b"a", b"hello", b"with spaces & symbols!~", b"~~~~~~~~~~~~~~~~"];
+    for bytes in inputs {
+        let a = unsafe { TinyAscii32::from_bytes_unchecked(bytes) };
+        let b = TinyAscii32::try_from_bytes(bytes).unwrap();
+        assert_eq!(a.as_bytes(), b.as_bytes());
+        assert_eq!(a.len(), b.len());
+        assert_eq!(a.is_full(), b.is_full());
+    }
+}
+
+#[test]
+fn from_bytes_unchecked_boundary_ascii_values() {
+    // Lowest (0x01) and highest (0x7F) valid non-null ASCII values.
+    let bytes = [0x01, 0x7F, 0x20, 0x7E];
+    let s = unsafe { TinyAscii8::from_bytes_unchecked(&bytes) };
+    assert_eq!(s.as_bytes(), &bytes);
+    assert_eq!(s.len(), 4);
+
+    let full = unsafe { TinyAscii4::from_bytes_unchecked(&bytes) };
+    assert_eq!(full.as_bytes(), &bytes);
+    assert!(full.is_full());
+}
+
+#[test]
+fn from_bytes_unchecked_then_mutate() {
+    let mut s = unsafe { TinyAscii8::from_bytes_unchecked(b"foo") };
+    s.try_push_str("bar").unwrap();
+    assert_eq!(&s, "foobar");
+
+    let mut s = unsafe { TinyAscii4::from_bytes_unchecked(b"abcd") };
+    assert_eq!(s.pop(), Some(NonNullAscii::SmallD));
+    assert_eq!(&s, "abc");
+}
+
+#[test]
+fn from_bytes_unchecked_into_parts_roundtrip() {
+    let s = unsafe { TinyAscii16::from_bytes_unchecked(b"roundtrip") };
+    let (arr, len) = s.into_parts();
+    assert_eq!(len, 9);
+    let rebuilt = unsafe { TinyAscii16::from_parts(arr, len) };
+    assert_eq!(&rebuilt, "roundtrip");
+}
+
+// ---------------------------------------------------------------------------
 // from_ascii_array
 // ---------------------------------------------------------------------------
 
