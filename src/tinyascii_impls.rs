@@ -6,7 +6,11 @@ use core::{
     str::FromStr,
 };
 
-use crate::{ascii::NonNullAscii, error::WriteAsciiError, tinyascii::TinyAscii};
+use crate::{
+    ascii::NonNullAscii,
+    error::{CapacityLimitError, WriteAsciiError},
+    tinyascii::TinyAscii,
+};
 
 // This impl should be on `type Target = [NonNullAscii]`, but
 // ASCII slice does not have the same support as `&str`.
@@ -235,6 +239,78 @@ impl<'a, const N: usize> TryFrom<&'a [u8]> for TinyAscii<N> {
 impl<'a, const N: usize> From<&'a TinyAscii<N>> for alloc::borrow::Cow<'a, str> {
     fn from(s: &'a TinyAscii<N>) -> alloc::borrow::Cow<'a, str> {
         alloc::borrow::Cow::Borrowed(s.as_str())
+    }
+}
+
+impl<'a, const N: usize> TryFrom<&'a [NonNullAscii]> for TinyAscii<N> {
+    type Error = CapacityLimitError;
+
+    fn try_from(value: &'a [NonNullAscii]) -> Result<Self, Self::Error> {
+        let mut tiny = Self::new();
+        tiny.try_push_slice(value)?;
+        Ok(tiny)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> TryFrom<alloc::string::String> for TinyAscii<N> {
+    type Error = WriteAsciiError;
+
+    fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+        Self::try_from_bytes(value.as_bytes())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, const N: usize> TryFrom<&'a alloc::string::String> for TinyAscii<N> {
+    type Error = WriteAsciiError;
+
+    fn try_from(value: &'a alloc::string::String) -> Result<Self, Self::Error> {
+        Self::try_from_bytes(value.as_bytes())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> TryFrom<alloc::vec::Vec<u8>> for TinyAscii<N> {
+    type Error = WriteAsciiError;
+
+    fn try_from(value: alloc::vec::Vec<u8>) -> Result<Self, Self::Error> {
+        Self::try_from_bytes(&value)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> From<TinyAscii<N>> for alloc::string::String {
+    fn from(value: TinyAscii<N>) -> Self {
+        Self::from(value.as_str())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> From<TinyAscii<N>> for alloc::vec::Vec<u8> {
+    fn from(value: TinyAscii<N>) -> Self {
+        value.into_bytes()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> From<TinyAscii<N>> for alloc::boxed::Box<str> {
+    fn from(value: TinyAscii<N>) -> Self {
+        value.into_boxed_str()
+    }
+}
+
+/// Appends to the string, failing with [`fmt::Error`] if the content does not
+/// fit in the spare capacity or is not valid non-null ASCII. A failed write
+/// leaves the string unchanged.
+impl<const N: usize> fmt::Write for TinyAscii<N> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.try_push_str(s).map_err(|_| fmt::Error)
+    }
+
+    fn write_char(&mut self, c: char) -> fmt::Result {
+        let byte = u8::try_from(c).map_err(|_| fmt::Error)?;
+        self.try_push_u8(byte).map_err(|_| fmt::Error)
     }
 }
 

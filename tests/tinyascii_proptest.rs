@@ -646,3 +646,128 @@ proptest! {
         prop_assert_eq!(&arr2[..s.len()], s.as_bytes());
     }
 }
+
+proptest! {
+    #[test]
+    fn retain_mut_matches_model(
+        s in ascii_string(0..=128),
+        threshold in 1u8..128,
+        replacement in non_null_ascii_strategy(),
+    ) {
+        let mut ta = TinyAscii128::try_from_str(&s).unwrap();
+        let mut model: Vec<u8> = s.as_bytes().to_vec();
+
+        ta.retain_mut(|c| {
+            if c.to_u8() > threshold {
+                *c = replacement;
+                true
+            } else {
+                false
+            }
+        });
+        model.retain_mut(|b| {
+            if *b > threshold {
+                *b = replacement.to_u8();
+                true
+            } else {
+                false
+            }
+        });
+
+        prop_assert_eq!(ta.as_bytes(), model.as_slice());
+        prop_assert_eq!(ta.len(), model.len());
+        prop_assert_eq!(ta.is_full(), model.len() == 128);
+    }
+}
+
+proptest! {
+    #[test]
+    fn retain_mut_matches_model_small_capacity(
+        s in ascii_string(0..=8),
+        threshold in 1u8..128,
+    ) {
+        let mut ta = TinyAscii8::try_from_str(&s).unwrap();
+        let mut model: Vec<u8> = s.as_bytes().to_vec();
+
+        ta.retain_mut(|c| c.to_u8() > threshold);
+        model.retain(|b| *b > threshold);
+
+        prop_assert_eq!(ta.as_bytes(), model.as_slice());
+        prop_assert_eq!(ta.is_full(), model.len() == 8);
+    }
+}
+
+proptest! {
+    #[test]
+    fn pop_if_matches_model(
+        s in ascii_string(0..=16),
+        threshold in 1u8..128,
+        replacement in non_null_ascii_strategy(),
+        pop in any::<bool>(),
+    ) {
+        let mut ta = TinyAscii16::try_from_str(&s).unwrap();
+        let mut model: Vec<u8> = s.as_bytes().to_vec();
+
+        let got = ta.pop_if(|c| {
+            let hit = c.to_u8() > threshold;
+            if hit {
+                *c = replacement;
+            }
+            hit && pop
+        }).map(NonNullAscii::to_u8);
+        let expected = model.pop_if(|b| {
+            let hit = *b > threshold;
+            if hit {
+                *b = replacement.to_u8();
+            }
+            hit && pop
+        });
+
+        prop_assert_eq!(got, expected);
+        prop_assert_eq!(ta.as_bytes(), model.as_slice());
+        prop_assert_eq!(ta.is_full(), model.len() == 16);
+    }
+}
+
+proptest! {
+    #[test]
+    fn try_resize_matches_model(
+        s in ascii_string(0..=32),
+        new_len in 0usize..=40,
+        value in non_null_ascii_strategy(),
+    ) {
+        let mut ta = TinyAscii32::try_from_str(&s).unwrap();
+        let mut model: Vec<u8> = s.as_bytes().to_vec();
+
+        let res = ta.try_resize(new_len, value);
+
+        if new_len > 32 {
+            prop_assert_eq!(res, Err(CapacityLimitError));
+        } else {
+            prop_assert_eq!(res, Ok(()));
+            model.resize(new_len, value.to_u8());
+        }
+
+        prop_assert_eq!(ta.as_bytes(), model.as_slice());
+        prop_assert_eq!(ta.len(), model.len());
+        prop_assert_eq!(ta.is_full(), model.len() == 32);
+    }
+}
+
+proptest! {
+    #[test]
+    fn fill_remaining_matches_model(
+        s in ascii_string(0..=32),
+        value in non_null_ascii_strategy(),
+    ) {
+        let mut ta = TinyAscii32::try_from_str(&s).unwrap();
+        let mut model: Vec<u8> = s.as_bytes().to_vec();
+        model.resize(32, value.to_u8());
+
+        ta.fill_remaining(value);
+
+        prop_assert_eq!(ta.as_bytes(), model.as_slice());
+        prop_assert!(ta.is_full());
+        prop_assert_eq!(ta.len(), 32);
+    }
+}

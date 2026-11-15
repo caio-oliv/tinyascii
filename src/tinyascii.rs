@@ -1479,6 +1479,43 @@ impl<const N: usize> TinyAscii<N> {
     where
         F: FnMut(NonNullAscii) -> bool,
     {
+        self.retain_mut(|c| f(*c));
+    }
+
+    /// Retains only the characters specified by the predicate, passing a
+    /// mutable reference to it.
+    ///
+    /// In other words, remove all ASCII characters `c` such that `f(&mut c)` returns `false`.
+    /// This method operates in place, visiting each character exactly once in the
+    /// original order, and preserves the order of the retained characters.
+    ///
+    /// Characters modified by `f` keep their new value if they are retained.
+    /// If `f` panics, the character being visited at that moment is kept
+    /// unmodified.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::{TinyAscii16, NonNullAscii};
+    /// let mut s = TinyAscii16::try_from_str("f_o_ob_ar").unwrap();
+    ///
+    /// s.retain_mut(|c| {
+    ///     if *c == '_' {
+    ///         false
+    ///     } else {
+    ///         if *c == 'o' {
+    ///             *c = NonNullAscii::Digit0;
+    ///         }
+    ///         true
+    ///     }
+    /// });
+    ///
+    /// assert_eq!(&s, "f00bar");
+    /// ```
+    pub fn retain_mut<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut NonNullAscii) -> bool,
+    {
         // Invariants while the guard is alive:
         // - `buf[..idx - deleted]` holds the retained characters,
         // - `buf[idx..original_len]` holds the not yet visited characters,
@@ -1528,18 +1565,18 @@ impl<const N: usize> TinyAscii<N> {
             f: &mut F,
             g: &mut BackshiftOnDrop<'_, N>,
         ) where
-            F: FnMut(NonNullAscii) -> bool,
+            F: FnMut(&mut NonNullAscii) -> bool,
         {
             while g.idx < original_len {
                 // SAFETY: `g.idx < original_len <= N`, and the byte is a valid
                 // initialized `NonNullAscii`, as all visited bytes are part of
                 // the content.
-                let ascii = unsafe {
+                let mut ascii = unsafe {
                     let byte = g.tiny.buf.get_unchecked(g.idx).assume_init();
                     NonNullAscii::from_u8_unchecked(byte)
                 };
 
-                if !f(ascii) {
+                if !f(&mut ascii) {
                     // Advance only after `f` returned, so a panic in `f` keeps
                     // the current character in the unvisited tail.
                     g.idx += 1;
@@ -1551,14 +1588,15 @@ impl<const N: usize> TinyAscii<N> {
                     return;
                 }
 
-                if DELETED {
-                    // SAFETY: `g.deleted <= g.idx < N`, so the destination is in bounds.
-                    unsafe {
-                        g.tiny
-                            .buf
-                            .get_unchecked_mut(g.idx - g.deleted)
-                            .write(ascii.to_u8());
-                    }
+                // Write back, as `f` may have modified the character. When
+                // `DELETED` is false this is the character's own slot.
+                //
+                // SAFETY: `g.deleted <= g.idx < N`, so the destination is in bounds.
+                unsafe {
+                    g.tiny
+                        .buf
+                        .get_unchecked_mut(g.idx - g.deleted)
+                        .write(ascii.to_u8());
                 }
                 g.idx += 1;
             }
@@ -1579,6 +1617,187 @@ impl<const N: usize> TinyAscii<N> {
         process_loop::<F, N, true>(original_len, &mut f, &mut g);
 
         drop(g);
+    }
+
+    /// Removes and returns the last character if the predicate returns `true`,
+    /// or [`None`] if the predicate returns `false` or the string is empty.
+    ///
+    /// The predicate receives a mutable reference to the last character, which
+    /// it may modify even when it returns `false`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::{TinyAscii8, NonNullAscii};
+    /// let mut s = TinyAscii8::try_from_str("abc1").unwrap();
+    ///
+    /// assert_eq!(s.pop_if(|c| c.is_digit()), Some(NonNullAscii::Digit1));
+    /// assert_eq!(s.pop_if(|c| c.is_digit()), None);
+    /// assert_eq!(&s, "abc");
+    ///
+    /// s.clear();
+    /// assert_eq!(s.pop_if(|_| true), None);
+    /// ```
+    pub fn pop_if<F>(&mut self, pred: F) -> Option<NonNullAscii>
+    where
+        F: FnOnce(&mut NonNullAscii) -> bool,
+    {
+        let last = self.as_mut_ascii().last_mut()?;
+
+        if pred(last) { self.pop() } else { None }
+    }
+
+    /// Fills `buf[start..end]` with `value`.
+    ///
+    /// # Safety
+    ///
+    /// `start <= end <= N`.
+    #[inline]
+    unsafe fn fill_range(&mut self, start: usize, end: usize, value: NonNullAscii) {
+        // `0` is not a valid `NonNullAscii`, so every byte is replaced by `value`.
+        const INVALID: [u8; MAX_LEN] = [0; MAX_LEN];
+
+        // SAFETY: `start <= end <= N <= MAX_LEN`, as ensured by the caller.
+        let (src, dst) = unsafe {
+            (
+                INVALID.get_unchecked(..end - start),
+                self.buf.get_unchecked_mut(start..end),
+            )
+        };
+
+        // SAFETY:
+        // - `src.len() <= MAX_LEN`
+        // - `dst.len() == src.len()`
+        unsafe { crate::simd::fill_ascii(src, dst, value) };
+    }
+
+    /// Resizes this [`TinyAscii`] in place so that its length is equal to `new_len`.
+    ///
+    /// If `new_len` is greater than the current length, the string is extended
+    /// with copies of `value`. Otherwise, it is truncated.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CapacityLimitError`] if `new_len` is greater than the capacity
+    /// of this `TinyAscii`. The string is not modified in this case.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::{TinyAscii8, NonNullAscii};
+    /// let mut s = TinyAscii8::try_from_str("ab").unwrap();
+    ///
+    /// s.try_resize(5, NonNullAscii::Digit0).unwrap();
+    /// assert_eq!(&s, "ab000");
+    ///
+    /// s.try_resize(1, NonNullAscii::Digit0).unwrap();
+    /// assert_eq!(&s, "a");
+    /// ```
+    ///
+    /// Not enough capacity:
+    ///
+    /// ```
+    /// # use tinyascii::{TinyAscii4, NonNullAscii, error::CapacityLimitError};
+    /// let mut s = TinyAscii4::try_from_str("ab").unwrap();
+    ///
+    /// let err = s.try_resize(5, NonNullAscii::Digit0).unwrap_err();
+    ///
+    /// assert_eq!(err, CapacityLimitError);
+    /// assert_eq!(&s, "ab");
+    /// ```
+    pub fn try_resize(
+        &mut self,
+        new_len: usize,
+        value: NonNullAscii,
+    ) -> Result<(), CapacityLimitError> {
+        if new_len > N {
+            return Err(CapacityLimitError);
+        }
+
+        let len = self.len();
+        if new_len <= len {
+            self.truncate(new_len);
+            return Ok(());
+        }
+
+        // The marker is written first: when `new_len == N` the fill below
+        // overwrites it with the last content byte, which clears the marker.
+        //
+        // SAFETY: `buf[len..new_len]` is filled just below.
+        unsafe { self.set_len(new_len) };
+
+        // SAFETY: `len < new_len <= N`.
+        unsafe { self.fill_range(len, new_len, value) };
+
+        Ok(())
+    }
+
+    /// Fills the spare capacity of this [`TinyAscii`] with `value`, making it full.
+    ///
+    /// Existing content is left intact. This differs from [`slice::fill`], which
+    /// overwrites every element: only the unused part (`len()..capacity()`)
+    /// is written, and the length grows to the capacity.
+    /// If the string is already full, this has no effect.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::{TinyAscii8, NonNullAscii};
+    /// let mut s = TinyAscii8::try_from_str("abc").unwrap();
+    ///
+    /// s.fill_remaining(NonNullAscii::HyphenMinus);
+    ///
+    /// assert_eq!(&s, "abc-----");
+    /// assert!(s.is_full());
+    ///
+    /// s.fill_remaining(NonNullAscii::Digit0);
+    /// assert_eq!(&s, "abc-----");
+    /// ```
+    pub fn fill_remaining(&mut self, value: NonNullAscii) {
+        let len = self.len();
+        if len == N {
+            return;
+        }
+
+        // The length is implicitly updated: `buf[N - 1]` becomes a content
+        // byte (< 0x80), which clears the length marker.
+        //
+        // SAFETY: `len < N`.
+        unsafe { self.fill_range(len, N, value) };
+    }
+
+    /// Converts this [`TinyAscii`] into a boxed string slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::TinyAscii8;
+    /// let s = TinyAscii8::try_from_str("abc").unwrap();
+    ///
+    /// let boxed: Box<str> = s.into_boxed_str();
+    ///
+    /// assert_eq!(&*boxed, "abc");
+    /// ```
+    #[cfg(feature = "alloc")]
+    #[must_use]
+    pub fn into_boxed_str(self) -> alloc::boxed::Box<str> {
+        alloc::boxed::Box::from(self.as_str())
+    }
+
+    /// Converts this [`TinyAscii`] into a byte vector with its content.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::TinyAscii8;
+    /// let s = TinyAscii8::try_from_str("abc").unwrap();
+    ///
+    /// assert_eq!(s.into_bytes(), b"abc");
+    /// ```
+    #[cfg(feature = "alloc")]
+    #[must_use]
+    pub fn into_bytes(self) -> alloc::vec::Vec<u8> {
+        self.as_bytes().to_vec()
     }
 
     /// Decomposes a [`TinyAscii`] into its raw components: `(byte_array, length)`.

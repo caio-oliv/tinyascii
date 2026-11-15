@@ -990,3 +990,114 @@ mod alloc_tests {
         assert_eq!(cow, "");
     }
 }
+
+// ---------------------------------------------------------------------------
+// fmt::Write
+// ---------------------------------------------------------------------------
+
+#[test]
+fn fmt_write_appends() {
+    use core::fmt::Write;
+
+    let mut s = TinyAscii16::new();
+    write!(s, "n={}", 42).unwrap();
+    s.write_char('!').unwrap();
+    assert_eq!(&s, "n=42!");
+}
+
+#[test]
+fn fmt_write_overflow_is_atomic() {
+    use core::fmt::Write;
+
+    let mut s = crate::TinyAscii::<5>::try_from_str("abc").unwrap();
+    assert!(s.write_str("def").is_err());
+    assert_eq!(&s, "abc");
+    s.write_str("de").unwrap();
+    assert_eq!(&s, "abcde");
+    assert!(s.is_full());
+    assert!(s.write_char('f').is_err());
+    assert_eq!(&s, "abcde");
+}
+
+#[test]
+fn fmt_write_invalid_ascii() {
+    use core::fmt::Write;
+
+    let mut s = TinyAscii16::new();
+    assert!(s.write_char('\0').is_err());
+    assert!(s.write_char('é').is_err());
+    assert!(s.write_str("a\0b").is_err());
+    assert!(s.write_str("café").is_err());
+    assert!(s.is_empty());
+}
+
+// ---------------------------------------------------------------------------
+// TryFrom<&[NonNullAscii]>
+// ---------------------------------------------------------------------------
+
+#[test]
+fn try_from_ascii_slice() {
+    use crate::NonNullAscii::{SmallA, SmallB};
+
+    let s = TinyAscii4::try_from(&[SmallA, SmallB][..]).unwrap();
+    assert_eq!(&s, "ab");
+
+    let s = TinyAscii4::try_from(&[SmallA; 4][..]).unwrap();
+    assert!(s.is_full());
+
+    let empty: &[crate::NonNullAscii] = &[];
+    assert!(TinyAscii4::try_from(empty).unwrap().is_empty());
+
+    assert_eq!(
+        TinyAscii4::try_from(&[SmallA; 5][..]),
+        Err(crate::error::CapacityLimitError)
+    );
+}
+
+#[cfg(feature = "alloc")]
+mod alloc_conversions {
+    use crate::TinyAscii8;
+    use crate::error::{CapacityLimitError, WriteAsciiError};
+
+    #[test]
+    fn into_string_vec_box() {
+        let s = TinyAscii8::try_from_str("hello").unwrap();
+        assert_eq!(String::from(s.clone()), "hello");
+        assert_eq!(Vec::<u8>::from(s.clone()), b"hello");
+        assert_eq!(&*Box::<str>::from(s.clone()), "hello");
+        assert_eq!(&*s.clone().into_boxed_str(), "hello");
+        assert_eq!(s.into_bytes(), b"hello");
+    }
+
+    #[test]
+    fn into_conversions_full_and_empty() {
+        let s = TinyAscii8::try_from_str("12345678").unwrap();
+        assert_eq!(String::from(s), "12345678");
+        assert_eq!(String::from(TinyAscii8::new()), "");
+        assert!(TinyAscii8::new().into_bytes().is_empty());
+    }
+
+    #[test]
+    fn try_from_string_and_vec() {
+        let owned = String::from("abc");
+        assert_eq!(&TinyAscii8::try_from(&owned).unwrap(), "abc");
+        assert_eq!(&TinyAscii8::try_from(owned).unwrap(), "abc");
+        assert_eq!(&TinyAscii8::try_from(b"abc".to_vec()).unwrap(), "abc");
+    }
+
+    #[test]
+    fn try_from_string_and_vec_errors() {
+        assert_eq!(
+            TinyAscii8::try_from(String::from("123456789")),
+            Err(WriteAsciiError::Capacity(CapacityLimitError))
+        );
+        assert_eq!(
+            TinyAscii8::try_from(&String::from("a\0b")),
+            Err(WriteAsciiError::InvalidAscii)
+        );
+        assert_eq!(
+            TinyAscii8::try_from(vec![b'a', 200]),
+            Err(WriteAsciiError::InvalidAscii)
+        );
+    }
+}

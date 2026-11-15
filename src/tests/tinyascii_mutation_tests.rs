@@ -854,3 +854,206 @@ fn retain_panic_on_last_char() {
     retain_panicking(&mut s, NonNullAscii::is_lowercase, NonNullAscii::Digit2);
     assert_eq!(&s, "ab2");
 }
+
+// ---------------------------------------------------------------------------
+// retain_mut
+// ---------------------------------------------------------------------------
+
+#[test]
+fn retain_mut_modifies_and_filters() {
+    let mut s = TinyAscii16::try_from_str("a1b2c3").unwrap();
+    s.retain_mut(|c| {
+        if c.is_digit() {
+            return false;
+        }
+        *c = NonNullAscii::SmallZ;
+        true
+    });
+    assert_eq!(&s, "zzz");
+    assert_eq!(s.len(), 3);
+    assert!(!s.is_full());
+}
+
+#[test]
+fn retain_mut_modifies_without_deleting() {
+    let mut s = TinyAscii8::try_from_str("abcdefgh").unwrap();
+    assert!(s.is_full());
+    s.retain_mut(|c| {
+        *c = NonNullAscii::Digit1;
+        true
+    });
+    assert_eq!(&s, "11111111");
+    assert!(s.is_full());
+}
+
+#[test]
+fn retain_mut_full_with_deletions() {
+    let mut s = TinyAscii8::try_from_str("a1b2c3d4").unwrap();
+    s.retain_mut(|c| {
+        if c.is_digit() {
+            return false;
+        }
+        *c = NonNullAscii::SmallX;
+        true
+    });
+    assert_eq!(&s, "xxxx");
+    assert_eq!(s.len(), 4);
+    assert!(!s.is_full());
+}
+
+#[test]
+fn retain_mut_empty_and_drop_all() {
+    let mut s = TinyAscii4::new();
+    s.retain_mut(|_| true);
+    assert!(s.is_empty());
+
+    let mut s = TinyAscii4::try_from_str("abcd").unwrap();
+    s.retain_mut(|_| false);
+    assert!(s.is_empty());
+    assert_eq!(s.len(), 0);
+}
+
+// ---------------------------------------------------------------------------
+// pop_if
+// ---------------------------------------------------------------------------
+
+#[test]
+fn pop_if_true_and_false() {
+    let mut s = TinyAscii8::try_from_str("ab1").unwrap();
+    assert_eq!(s.pop_if(|c| c.is_digit()), Some(NonNullAscii::Digit1));
+    assert_eq!(s.pop_if(|c| c.is_digit()), None);
+    assert_eq!(&s, "ab");
+}
+
+#[test]
+fn pop_if_empty_does_not_call_predicate() {
+    let mut s = TinyAscii4::new();
+    assert_eq!(s.pop_if(|_| panic!("must not be called")), None);
+}
+
+#[test]
+fn pop_if_mutation_persists_when_not_popped() {
+    let mut s = TinyAscii4::try_from_str("abcd").unwrap();
+    assert!(s.is_full());
+    assert_eq!(
+        s.pop_if(|c| {
+            *c = NonNullAscii::SmallZ;
+            false
+        }),
+        None
+    );
+    assert_eq!(&s, "abcz");
+    assert!(s.is_full());
+}
+
+#[test]
+fn pop_if_mutation_returned_when_popped() {
+    let mut s = TinyAscii4::try_from_str("abcd").unwrap();
+    assert_eq!(
+        s.pop_if(|c| {
+            *c = NonNullAscii::SmallZ;
+            true
+        }),
+        Some(NonNullAscii::SmallZ)
+    );
+    assert_eq!(&s, "abc");
+    assert!(!s.is_full());
+}
+
+// ---------------------------------------------------------------------------
+// try_resize
+// ---------------------------------------------------------------------------
+
+#[test]
+fn try_resize_grow() {
+    let mut s = TinyAscii8::try_from_str("ab").unwrap();
+    s.try_resize(5, NonNullAscii::Digit0).unwrap();
+    assert_eq!(&s, "ab000");
+    assert_eq!(s.len(), 5);
+    assert!(!s.is_full());
+}
+
+#[test]
+fn try_resize_grow_to_capacity() {
+    let mut s = TinyAscii8::try_from_str("ab").unwrap();
+    s.try_resize(8, NonNullAscii::Digit0).unwrap();
+    assert_eq!(&s, "ab000000");
+    assert!(s.is_full());
+
+    let mut s = TinyAscii::<128>::new();
+    s.try_resize(128, NonNullAscii::SmallA).unwrap();
+    assert_eq!(s.len(), 128);
+    assert!(s.is_full());
+    assert!(s.as_bytes().iter().all(|&b| b == b'a'));
+}
+
+#[test]
+fn try_resize_truncate_and_same() {
+    let mut s = TinyAscii8::try_from_str("abcdef").unwrap();
+    s.try_resize(6, NonNullAscii::Digit0).unwrap();
+    assert_eq!(&s, "abcdef");
+    s.try_resize(2, NonNullAscii::Digit0).unwrap();
+    assert_eq!(&s, "ab");
+    s.try_resize(0, NonNullAscii::Digit0).unwrap();
+    assert!(s.is_empty());
+}
+
+#[test]
+fn try_resize_truncate_full() {
+    let mut s = TinyAscii4::try_from_str("abcd").unwrap();
+    s.try_resize(3, NonNullAscii::Digit0).unwrap();
+    assert_eq!(&s, "abc");
+    assert!(!s.is_full());
+}
+
+#[test]
+fn try_resize_over_capacity() {
+    let mut s = TinyAscii4::try_from_str("ab").unwrap();
+    assert_eq!(
+        s.try_resize(5, NonNullAscii::Digit0),
+        Err(CapacityLimitError)
+    );
+    assert_eq!(&s, "ab");
+}
+
+// ---------------------------------------------------------------------------
+// fill_remaining
+// ---------------------------------------------------------------------------
+
+#[test]
+fn fill_remaining_partial() {
+    let mut s = TinyAscii8::try_from_str("abc").unwrap();
+    s.fill_remaining(NonNullAscii::HyphenMinus);
+    assert_eq!(&s, "abc-----");
+    assert_eq!(s.len(), 8);
+    assert!(s.is_full());
+}
+
+#[test]
+fn fill_remaining_empty() {
+    let mut s = TinyAscii4::new();
+    s.fill_remaining(NonNullAscii::SmallX);
+    assert_eq!(&s, "xxxx");
+    assert!(s.is_full());
+}
+
+#[test]
+fn fill_remaining_full_is_noop() {
+    let mut s = TinyAscii4::try_from_str("abcd").unwrap();
+    s.fill_remaining(NonNullAscii::SmallX);
+    assert_eq!(&s, "abcd");
+}
+
+#[test]
+fn fill_remaining_one_spare_and_max() {
+    let mut s = TinyAscii4::try_from_str("abc").unwrap();
+    s.fill_remaining(NonNullAscii::SmallX);
+    assert_eq!(&s, "abcx");
+    assert!(s.is_full());
+
+    let mut s = TinyAscii::<128>::try_from_str("a").unwrap();
+    s.fill_remaining(NonNullAscii::SmallB);
+    assert_eq!(s.len(), 128);
+    assert!(s.is_full());
+    assert_eq!(&s.as_bytes()[..2], b"ab");
+}
