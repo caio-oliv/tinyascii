@@ -1,5 +1,5 @@
 use core::{
-    borrow::{Borrow, BorrowMut},
+    borrow::Borrow,
     fmt,
     hash::Hash,
     ops::Deref,
@@ -12,9 +12,9 @@ use crate::{
     tinyascii::TinyAscii,
 };
 
-// This impl should be on `type Target = [NonNullAscii]`, but
-// ASCII slice does not have the same support as `&str`.
-// Maybe when std has a stable `&[core::ascii::Char]` type.
+// `Target = str` (not `[NonNullAscii]`) so callers get the full `str` API.
+// The ASCII-slice view is available via `as_ascii()`. Revisit if
+// `[core::ascii::Char]` stabilizes with comparable string-like support.
 impl<const N: usize> Deref for TinyAscii<N> {
     type Target = str;
 
@@ -61,21 +61,9 @@ impl<const N: usize> AsMut<[NonNullAscii]> for TinyAscii<N> {
     }
 }
 
-impl<const N: usize> Borrow<[NonNullAscii]> for TinyAscii<N> {
-    fn borrow(&self) -> &[NonNullAscii] {
-        self.as_ascii()
-    }
-}
-
 impl<const N: usize> Borrow<str> for TinyAscii<N> {
     fn borrow(&self) -> &str {
         self.as_str()
-    }
-}
-
-impl<const N: usize> BorrowMut<[NonNullAscii]> for TinyAscii<N> {
-    fn borrow_mut(&mut self) -> &mut [NonNullAscii] {
-        self.as_mut_ascii()
     }
 }
 

@@ -90,17 +90,8 @@ fn as_mut_empty() {
 }
 
 // ---------------------------------------------------------------------------
-// Borrow<[NonNullAscii]> / Borrow<str>
+// Borrow<str>
 // ---------------------------------------------------------------------------
-
-#[test]
-fn borrow_nonnull_ascii() {
-    use core::borrow::Borrow;
-
-    let s: TinyAscii8 = TinyAscii8::try_from_str("x").unwrap();
-    let borrowed: &[NonNullAscii] = s.borrow();
-    assert_eq!(borrowed, &[NonNullAscii::SmallX]);
-}
 
 #[test]
 fn borrow_str() {
@@ -109,20 +100,6 @@ fn borrow_str() {
     let s: TinyAscii8 = TinyAscii8::try_from_str("x").unwrap();
     let borrowed: &str = s.borrow();
     assert_eq!(borrowed, "x");
-}
-
-// ---------------------------------------------------------------------------
-// BorrowMut<[NonNullAscii]>
-// ---------------------------------------------------------------------------
-
-#[test]
-fn borrow_mut_nonnull_ascii() {
-    use core::borrow::BorrowMut;
-
-    let mut s: TinyAscii8 = TinyAscii8::try_from_str("12").unwrap();
-    let borrowed: &mut [NonNullAscii] = BorrowMut::borrow_mut(&mut s);
-    borrowed[0] = NonNullAscii::Digit9;
-    assert_eq!(&s, "92");
 }
 
 // ---------------------------------------------------------------------------
