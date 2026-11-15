@@ -9,18 +9,55 @@ use crate::error::{
     CapacityLimitError, InsertAsciiError, InsertRangeError, RemoveRangeError, WriteAsciiError,
 };
 
+/// A fixed-capacity ASCII string stored inline, holding up to `N` non-null
+/// ASCII characters.
+///
+/// `N` must be greater than 0 and less than or equal to [`MAX_LEN`] (128),
+/// otherwise compilation fails. The type aliases [`TinyAscii4`], [`TinyAscii8`],
+/// [`TinyAscii16`], [`TinyAscii32`], [`TinyAscii64`] and [`TinyAscii128`] cover
+/// the common sizes.
+///
+/// # Layout
+///
+/// The string is backed by `[u8; N]` and has no separate length field. The
+/// content never contains NUL, and the last byte of the buffer doubles as the
+/// length marker: if its top bit is set, the low 7 bits are the length;
+/// otherwise the string is full and that byte is real content.
+/// The size of a `TinyAscii<N>` is therefore exactly `N` bytes.
+///
+/// # Examples
+///
+/// ```
+/// # use tinyascii::TinyAscii8;
+/// let mut s = TinyAscii8::try_from_str("tiny").unwrap();
+///
+/// s.try_push_str("str").unwrap();
+///
+/// assert_eq!(&s, "tinystr");
+/// assert_eq!(core::mem::size_of::<TinyAscii8>(), 8);
+/// ```
 #[derive(Clone)]
 pub struct TinyAscii<const N: usize> {
     buf: [MaybeUninit<u8>; N],
 }
 
+/// The maximum capacity (`N`) of a [`TinyAscii`], in bytes.
+///
+/// The length marker uses the low 7 bits of the last byte, so a length
+/// cannot be greater than 128.
 pub const MAX_LEN: usize = 128;
 
+/// A [`TinyAscii`] with a capacity of 4 bytes.
 pub type TinyAscii4 = TinyAscii<4>;
+/// A [`TinyAscii`] with a capacity of 8 bytes.
 pub type TinyAscii8 = TinyAscii<8>;
+/// A [`TinyAscii`] with a capacity of 16 bytes.
 pub type TinyAscii16 = TinyAscii<16>;
+/// A [`TinyAscii`] with a capacity of 32 bytes.
 pub type TinyAscii32 = TinyAscii<32>;
+/// A [`TinyAscii`] with a capacity of 64 bytes.
 pub type TinyAscii64 = TinyAscii<64>;
+/// A [`TinyAscii`] with the maximum capacity of 128 bytes ([`MAX_LEN`]).
 pub type TinyAscii128 = TinyAscii<MAX_LEN>;
 
 /// Static assert that [`TinyAscii`] capacity `N` is greater

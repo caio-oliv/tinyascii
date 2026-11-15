@@ -1,9 +1,19 @@
+//! Error types returned by the fallible [`TinyAscii`] operations.
+//!
+//! [`TinyAscii`]: crate::TinyAscii
+
+/// An error returned when an operation does not fit in the spare capacity of
+/// a [`TinyAscii`](crate::TinyAscii).
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct CapacityLimitError;
 
+/// An error returned when writing bytes or a `&str` into a
+/// [`TinyAscii`](crate::TinyAscii) fails.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum WriteAsciiError {
+    /// The input contains a null (`\0`) or non-ASCII byte.
     InvalidAscii,
+    /// The input does not fit in the available capacity.
     Capacity(CapacityLimitError),
 }
 
@@ -13,9 +23,13 @@ impl From<CapacityLimitError> for WriteAsciiError {
     }
 }
 
+/// An error returned when inserting characters at an index of a
+/// [`TinyAscii`](crate::TinyAscii) fails.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InsertAsciiError {
+    /// The index is greater than the string length.
     IndexOutOfBounds,
+    /// The characters do not fit in the available capacity.
     Capacity(CapacityLimitError),
 }
 
@@ -25,9 +39,14 @@ impl From<CapacityLimitError> for InsertAsciiError {
     }
 }
 
+/// An error returned when an operation that inserts a range of characters into
+/// a [`TinyAscii`](crate::TinyAscii) fails.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InsertRangeError {
+    /// The range start is greater than its end, or its end is greater than
+    /// the string length.
     RangeOutOfBounds,
+    /// The resulting string does not fit in the capacity.
     Capacity(CapacityLimitError),
 }
 
@@ -37,6 +56,9 @@ impl From<CapacityLimitError> for InsertRangeError {
     }
 }
 
+/// An error returned when removing a range from a [`TinyAscii`](crate::TinyAscii)
+/// fails, because the range start is greater than its end, or its end is
+/// greater than the string length.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct RemoveRangeError;
 
@@ -49,7 +71,7 @@ impl core::fmt::Display for CapacityLimitError {
 impl core::fmt::Display for WriteAsciiError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::InvalidAscii => f.write_str("invalid ASCII value"),
+            Self::InvalidAscii => f.write_str("invalid non-null ASCII value"),
             Self::Capacity(_) => f.write_str("capacity limit exceeded"),
         }
     }
@@ -123,7 +145,7 @@ mod tests {
     #[test]
     fn write_ascii_error_display() {
         let err = WriteAsciiError::InvalidAscii;
-        assert_eq!(format!("{err}"), "invalid ASCII value");
+        assert_eq!(format!("{err}"), "invalid non-null ASCII value");
 
         let err = WriteAsciiError::Capacity(CapacityLimitError);
         assert_eq!(format!("{err}"), "capacity limit exceeded");
