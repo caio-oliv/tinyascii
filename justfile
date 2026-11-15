@@ -7,6 +7,8 @@ set default-list
     cargo build --features dep_tinystr
     cargo build --features dep_ascii
     cargo build --all-features
+    cargo build --all-features --target aarch64-unknown-linux-gnu
+    cargo build --all-features --target wasm32-unknown-unknown
 
 @check-all:
     @just build-matrix

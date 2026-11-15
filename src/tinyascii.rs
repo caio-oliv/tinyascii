@@ -962,6 +962,10 @@ impl<const N: usize> TinyAscii<N> {
         bytes: &[u8],
         replacement: NonNullAscii,
     ) -> Result<(), CapacityLimitError> {
+        if bytes.is_empty() {
+            return Ok(());
+        }
+
         let len = self.len();
         let final_len = len + bytes.len();
 

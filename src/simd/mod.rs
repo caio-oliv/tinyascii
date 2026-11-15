@@ -1,3 +1,7 @@
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
 mod avx2;
 mod scalar;
 
@@ -15,7 +19,7 @@ use crate::ascii::NonNullAscii;
 #[inline]
 pub unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
     cfg_select! {
-        target_feature = "avx2" => {
+        all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2") => {
             // SAFETY:
             // 1. AVX2 version has same safety requirements as `self::is_valid_tinyascii`
             // 2. `is_valid_tinyascii` requires target_feature avx2 enabled
@@ -39,7 +43,7 @@ pub unsafe fn is_valid_tinyascii(src: &[u8]) -> bool {
 #[inline]
 pub unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) -> bool {
     cfg_select! {
-        target_feature = "avx2" => {
+        all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2") => {
             // SAFETY:
             // 1. AVX2 version has same safety requirements as `self::copy_valid_tinyascii`
             // 2. `copy_valid_tinyascii` requires target_feature avx2 enabled
@@ -63,7 +67,7 @@ pub unsafe fn copy_valid_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) -> b
 #[inline]
 pub unsafe fn copy_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) {
     cfg_select! {
-        target_feature = "avx2" => {
+        all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2") => {
             // SAFETY:
             // 1. AVX2 version has same safety requirements as `self::copy_tinyascii`
             // 2. `copy_tinyascii` requires target_feature avx2 enabled
@@ -88,7 +92,7 @@ pub unsafe fn copy_tinyascii(src: &[u8], dst: &mut [MaybeUninit<u8>]) {
 #[inline]
 pub unsafe fn fill_ascii(src: &[u8], dst: &mut [MaybeUninit<u8>], replacement: NonNullAscii) {
     cfg_select! {
-        target_feature = "avx2" => {
+        all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2") => {
             // SAFETY:
             // 1. AVX2 version has same safety requirements as `self::fill_ascii`
             // 2. `fill_ascii` requires target_feature avx2 enabled
@@ -111,7 +115,7 @@ pub unsafe fn fill_ascii(src: &[u8], dst: &mut [MaybeUninit<u8>], replacement: N
 #[inline]
 pub unsafe fn fill_value(dst: &mut [MaybeUninit<u8>], value: NonNullAscii) {
     cfg_select! {
-        target_feature = "avx2" => {
+        all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2") => {
             // SAFETY:
             // 1. AVX2 version has same safety requirements as `self::fill_value`
             // 2. `fill_value` requires target_feature avx2 enabled

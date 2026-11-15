@@ -8,7 +8,9 @@ use core::assert_matches;
 use crate::error::{
     CapacityLimitError, InsertAsciiError, InsertRangeError, RemoveRangeError, WriteAsciiError,
 };
-use crate::{NonNullAscii, TinyAscii, TinyAscii4, TinyAscii8, TinyAscii16, TinyAscii32};
+use crate::{
+    NonNullAscii, TinyAscii, TinyAscii4, TinyAscii8, TinyAscii16, TinyAscii32, TinyAscii128,
+};
 
 // ---------------------------------------------------------------------------
 // try_push / try_push_u8 / try_push_str / try_push_bytes
@@ -193,6 +195,18 @@ fn try_push_lossy_empty() {
     let mut s = TinyAscii8::try_from_str("test").unwrap();
     s.try_push_lossy(&[], NonNullAscii::QuestionMark).unwrap();
     assert_eq!(&s, "test");
+}
+
+#[test]
+fn try_push_lossy_empty_on_full_keeps_content() {
+    let mut s = TinyAscii4::try_from_str("abcd").unwrap();
+    s.try_push_lossy(&[], NonNullAscii::QuestionMark).unwrap();
+    assert_eq!(&s, "abcd");
+    assert!(s.is_full());
+
+    let mut s = TinyAscii128::try_from_str(&"a".repeat(128)).unwrap();
+    s.try_push_lossy(&[], NonNullAscii::QuestionMark).unwrap();
+    assert_eq!(s.len(), 128);
 }
 
 #[test]
