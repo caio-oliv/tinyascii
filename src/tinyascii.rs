@@ -81,14 +81,14 @@ impl<const N: usize> TinyAscii<N> {
     /// Creates a new [`TinyAscii`] from a byte slice `&[u8]`.
     ///
     /// The byte slice must contain only non-null ASCII characters and
-    /// length less than capacity (`N`).
+    /// its length must be less than or equal to the capacity (`N`).
     ///
     /// # Safety
     ///
     /// Caller must ensure that:
     ///
-    /// * `bytes.len()` is less or equal than `N`.
-    /// * All bytes (`u8`) must be valid [`NonNullAscii`] characters.
+    /// * `bytes.len()` is less than or equal to `N`.
+    /// * All bytes (`u8`) are valid [`NonNullAscii`] characters.
     ///
     /// Use the safe version, [`try_from_bytes`], if bytes may be invalid.
     ///
@@ -112,7 +112,7 @@ impl<const N: usize> TinyAscii<N> {
         unsafe { tiny.set_len(bytes.len()) };
 
         // SAFETY:
-        // - `bytes.len()` is is less or equal than `N` as
+        // - `bytes.len()` is less than or equal to `N` as
         // ensured by the caller
         // - `tiny.buf.len()` is greater or equal than `bytes`
         // length as ensured by the caller
@@ -126,7 +126,13 @@ impl<const N: usize> TinyAscii<N> {
     /// Creates a new [`TinyAscii`] from a `&str`.
     ///
     /// The `&str` must contain only non-null ASCII characters and
-    /// length less than capacity (`N`).
+    /// its length must be less than or equal to the capacity (`N`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`WriteAsciiError::InvalidAscii`] if the `&str` contains a null
+    /// or non-ASCII character, or [`WriteAsciiError::Capacity`] if its length
+    /// is greater than the capacity (`N`).
     ///
     /// # Examples
     ///
@@ -151,7 +157,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// ```
     /// # use tinyascii::{TinyAscii8, error::{WriteAsciiError, CapacityLimitError}};
-    /// let err = TinyAscii8::try_from_str("not soo tiny string").unwrap_err();
+    /// let err = TinyAscii8::try_from_str("not so tiny string").unwrap_err();
     /// assert_eq!(err, WriteAsciiError::Capacity(CapacityLimitError));
     /// ```
     #[inline(always)]
@@ -164,7 +170,13 @@ impl<const N: usize> TinyAscii<N> {
     /// Creates a new [`TinyAscii`] from a byte slice `&[u8]`.
     ///
     /// The byte slice must contain only non-null ASCII characters and
-    /// length less than capacity (`N`).
+    /// its length must be less than or equal to the capacity (`N`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`WriteAsciiError::InvalidAscii`] if the slice contains a null
+    /// or non-ASCII byte, or [`WriteAsciiError::Capacity`] if its length is
+    /// greater than the capacity (`N`).
     ///
     /// # Examples
     ///
@@ -243,8 +255,12 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Creates a new [`TinyAscii`] from a byte slice `&[u8]`.
     ///
-    /// The byte slice length must be less than capacity (`N`). During the conversion, it will
-    /// replace any invalid ASCII characters with the provided replacement.
+    /// The byte slice length must be less than or equal to the capacity (`N`). During the
+    /// conversion, any null or non-ASCII byte is replaced with the provided replacement.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CapacityLimitError`] if the slice length is greater than the capacity (`N`).
     ///
     /// # Examples
     ///
@@ -260,7 +276,7 @@ impl<const N: usize> TinyAscii<N> {
     /// ```
     /// # use tinyascii::{TinyAscii8, NonNullAscii, error::CapacityLimitError};
     /// let bytes = "string too large".as_bytes();
-    /// let err = TinyAscii8::from_ascii_lossy(&bytes, NonNullAscii::QuestionMark).unwrap_err();
+    /// let err = TinyAscii8::from_ascii_lossy(bytes, NonNullAscii::QuestionMark).unwrap_err();
     /// assert_eq!(err, CapacityLimitError);
     /// ```
     pub fn from_ascii_lossy(
@@ -284,18 +300,18 @@ impl<const N: usize> TinyAscii<N> {
         Ok(tiny)
     }
 
-    /// Resizes [`TinyAscii`] capacity.
+    /// Converts this [`TinyAscii`] into one with a different capacity `M`.
     ///
-    /// If `M` is greater than `N`, the `TinyAscii` is extended by
-    /// the difference. If `M` is less than `N`, the `TinyAscii` is
-    /// simply truncated.
+    /// If `M` is greater than or equal to the current length, the content is
+    /// preserved and the extra capacity is left unused. Otherwise, the content is
+    /// truncated to its first `M` characters.
     ///
     /// # Examples
     ///
     /// Extending (`M` > `N`):
     ///
     /// ```
-    /// # use tinyascii::{TinyAscii, NonNullAscii, error::CapacityLimitError};
+    /// # use tinyascii::TinyAscii;
     /// let s = TinyAscii::<20>::try_from_str("to be extended ...").unwrap();
     /// assert_eq!(s.capacity(), 20);
     ///
@@ -307,7 +323,7 @@ impl<const N: usize> TinyAscii<N> {
     /// Truncating (`M` < `N`):
     ///
     /// ```
-    /// # use tinyascii::{TinyAscii, NonNullAscii, error::CapacityLimitError};
+    /// # use tinyascii::TinyAscii;
     /// let s = TinyAscii::<20>::try_from_str("to be truncated ...").unwrap();
     /// assert_eq!(s.capacity(), 20);
     ///
@@ -353,8 +369,10 @@ impl<const N: usize> TinyAscii<N> {
         N
     }
 
-    /// Returns the length in bytes, and given ASCII occupies 1 byte, it's also
-    /// the ASCII string length.
+    /// Returns the length of this [`TinyAscii`], in bytes.
+    ///
+    /// Since every ASCII character occupies exactly 1 byte, this is also the
+    /// number of characters.
     ///
     /// # Examples
     ///
@@ -559,7 +577,10 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Appends the given [`NonNullAscii`] to the end of this [`TinyAscii`].
     ///
-    /// Returns an [`CapacityLimitError`] if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns a [`CapacityLimitError`] if there is no spare capacity.
+    /// The string is not modified in this case.
     ///
     /// # Examples
     ///
@@ -600,7 +621,10 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Appends the given [`NonNullAscii`] slice to the end of this [`TinyAscii`].
     ///
-    /// Returns an [`CapacityLimitError`] if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns a [`CapacityLimitError`] if the slice does not fit in the spare
+    /// capacity. The string is not modified in this case.
     ///
     /// # Examples
     ///
@@ -661,8 +685,11 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Appends the given byte to the end of this [`TinyAscii`].
     ///
-    /// Returns an [`WriteAsciiError`] if the byte is an invalid non-null
-    /// ASCII or if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns [`WriteAsciiError::InvalidAscii`] if the byte is not a valid non-null
+    /// ASCII character, or [`WriteAsciiError::Capacity`] if there is no spare capacity.
+    /// The string is not modified in either case.
     ///
     /// # Examples
     ///
@@ -710,8 +737,11 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Appends the given byte slice to the end of this [`TinyAscii`].
     ///
-    /// Returns an [`WriteAsciiError`] if the slice contains an invalid non-null
-    /// ASCII or if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns [`WriteAsciiError::Capacity`] if the slice does not fit in the spare
+    /// capacity, or [`WriteAsciiError::InvalidAscii`] if it contains a null or
+    /// non-ASCII byte. The string is not modified in either case.
     ///
     /// # Examples
     ///
@@ -786,10 +816,13 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Appends the given byte slice to the end of this [`TinyAscii`].
     ///
-    /// The byte slice length must fit in the spare capacity. During the conversion, it will
-    /// replace any invalid ASCII characters with the provided replacement.
+    /// The byte slice length must fit in the spare capacity. During the conversion, any
+    /// null or non-ASCII byte is replaced with the provided replacement.
     ///
-    /// Returns an [`CapacityLimitError`] if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns a [`CapacityLimitError`] if the slice does not fit in the spare
+    /// capacity. The string is not modified in this case.
     ///
     /// # Examples
     ///
@@ -838,8 +871,11 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Appends the given string `&str` to the end of this [`TinyAscii`].
     ///
-    /// Returns an [`WriteAsciiError`] if the str contains an invalid non-null
-    /// ASCII or if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns [`WriteAsciiError::Capacity`] if the `&str` does not fit in the spare
+    /// capacity, or [`WriteAsciiError::InvalidAscii`] if it contains a null or
+    /// non-ASCII character. The string is not modified in either case.
     ///
     /// # Examples
     ///
@@ -886,8 +922,11 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// Note that calling this in a loop can result in quadratic behavior.
     ///
-    /// Returns [`InsertAsciiError`] if `idx` is larger than the `TinyAscii`'s
-    /// length, or if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns [`InsertAsciiError::Capacity`] if there is no spare capacity, or
+    /// [`InsertAsciiError::IndexOutOfBounds`] if `idx` is larger than the
+    /// `TinyAscii`'s length. The string is not modified in either case.
     ///
     /// # Examples
     ///
@@ -917,7 +956,7 @@ impl<const N: usize> TinyAscii<N> {
     /// Index out of bounds:
     ///
     /// ```
-    /// # use tinyascii::{TinyAscii8, NonNullAscii, error::{InsertAsciiError, CapacityLimitError}};
+    /// # use tinyascii::{TinyAscii8, NonNullAscii, error::InsertAsciiError};
     /// let mut s = TinyAscii8::try_from_str("12345").unwrap();
     ///
     /// let err = s.try_insert(8, NonNullAscii::PercentSign).unwrap_err();
@@ -969,8 +1008,11 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// Note that calling this in a loop can result in quadratic behavior.
     ///
-    /// Returns [`InsertAsciiError`] if `idx` is larger than the `TinyAscii`'s
-    /// length, or if there is no spare capacity.
+    /// # Errors
+    ///
+    /// Returns [`InsertAsciiError::Capacity`] if the slice does not fit in the spare
+    /// capacity, or [`InsertAsciiError::IndexOutOfBounds`] if `idx` is larger than
+    /// the `TinyAscii`'s length. The string is not modified in either case.
     ///
     /// # Examples
     ///
@@ -1000,7 +1042,7 @@ impl<const N: usize> TinyAscii<N> {
     /// Index out of bounds:
     ///
     /// ```
-    /// # use tinyascii::{TinyAscii8, NonNullAscii, error::{InsertAsciiError, CapacityLimitError}};
+    /// # use tinyascii::{TinyAscii8, NonNullAscii, error::InsertAsciiError};
     /// let mut s = TinyAscii8::try_from_str("bar").unwrap();
     /// let foo = [NonNullAscii::SmallF, NonNullAscii::SmallO, NonNullAscii::SmallO];
     ///
@@ -1055,15 +1097,19 @@ impl<const N: usize> TinyAscii<N> {
         Ok(())
     }
 
-    /// Copies elements from `src` range to the end of the string.
+    /// Copies characters from the `src` range to the end of the string.
     ///
-    /// Returns [`InsertRangeError`] if the range has `start_bound > end_bound`, or if
-    /// the it exceeds the available capacity.
+    /// # Errors
+    ///
+    /// Returns [`InsertRangeError::RangeOutOfBounds`] if the range has
+    /// `start_bound > end_bound` or `end_bound > self.len()`, or
+    /// [`InsertRangeError::Capacity`] if the copied characters exceed the spare
+    /// capacity. The string is not modified in either case.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tinyascii::{TinyAscii32, NonNullAscii};
+    /// # use tinyascii::{TinyAscii32, NonNullAscii};
     /// let mut s = TinyAscii32::try_from_str("abcde").unwrap();
     ///
     /// s.extend_from_within(2..).unwrap();
@@ -1084,7 +1130,7 @@ impl<const N: usize> TinyAscii<N> {
     /// Range out of bounds:
     ///
     /// ```
-    /// use tinyascii::{TinyAscii32, error::InsertRangeError};
+    /// # use tinyascii::{TinyAscii32, error::InsertRangeError};
     /// let mut s = TinyAscii32::try_from_str("abcde").unwrap();
     ///
     /// let err = s.extend_from_within(2..9).unwrap_err();
@@ -1100,7 +1146,7 @@ impl<const N: usize> TinyAscii<N> {
     /// Not enough capacity:
     ///
     /// ```
-    /// use tinyascii::{TinyAscii8, error::{InsertRangeError, CapacityLimitError}};
+    /// # use tinyascii::{TinyAscii8, error::{InsertRangeError, CapacityLimitError}};
     /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     ///
     /// let err = s.extend_from_within(..).unwrap_err();
@@ -1151,10 +1197,14 @@ impl<const N: usize> TinyAscii<N> {
     }
 
     /// Removes the specified range in the [`TinyAscii`], and replaces it with the given
-    /// `&[NonNullAscii]`. The given string doesn’t need to be the same length as the range.
+    /// `&[NonNullAscii]`. The given slice doesn't need to be the same length as the range.
     ///
-    /// Returns [`InsertRangeError`] if the range has `start_bound > end_bound`, if
-    /// `end_bound > self.len()`, or if it exceeds the available capacity.
+    /// # Errors
+    ///
+    /// Returns [`InsertRangeError::RangeOutOfBounds`] if the range has
+    /// `start_bound > end_bound` or `end_bound > self.len()`, or
+    /// [`InsertRangeError::Capacity`] if the resulting length would exceed the
+    /// capacity. The string is not modified in either case.
     ///
     /// # Examples
     ///
@@ -1272,8 +1322,10 @@ impl<const N: usize> TinyAscii<N> {
 
     /// Removes the specified range in the [`TinyAscii`].
     ///
-    /// Returns [`InsertRangeError`] if the range has `start_bound > end_bound`, or if
-    /// `end_bound > self.len()`.
+    /// # Errors
+    ///
+    /// Returns a [`RemoveRangeError`] if the range has `start_bound > end_bound`, or if
+    /// `end_bound > self.len()`. The string is not modified in this case.
     ///
     /// # Examples
     ///
@@ -1358,7 +1410,7 @@ impl<const N: usize> TinyAscii<N> {
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::{TinyAscii8, NonNullAscii, error::RemoveRangeError};
+    /// # use tinyascii::{TinyAscii8, NonNullAscii};
     /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     ///
     /// assert_eq!(s.remove(0), Some(NonNullAscii::SmallA));
@@ -1371,7 +1423,7 @@ impl<const N: usize> TinyAscii<N> {
     /// Index out of bounds:
     ///
     /// ```
-    /// # use tinyascii::{TinyAscii8, NonNullAscii, error::RemoveRangeError};
+    /// # use tinyascii::{TinyAscii8, NonNullAscii};
     /// let mut s = TinyAscii8::try_from_str("abcde").unwrap();
     ///
     /// assert_eq!(s.remove(9), None);
@@ -1409,7 +1461,8 @@ impl<const N: usize> TinyAscii<N> {
         Some(unsafe { NonNullAscii::from_u8_unchecked(ascii) })
     }
 
-    /// Returns the last [`NonNullAscii`] character from a [`TinyAscii`] and returns it, or [`None`] if it is empty.
+    /// Removes the last [`NonNullAscii`] character from this [`TinyAscii`] and returns it,
+    /// or [`None`] if it is empty.
     ///
     /// # Examples
     ///
@@ -1804,6 +1857,7 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// Returns the array with the ASCII string data, and the length of the string (in bytes).
     /// These are the same arguments in the same order as the arguments to [`from_parts`].
+    /// Every byte of the array past the returned length is zero.
     ///
     /// [`from_parts`]: TinyAscii::from_parts
     ///
@@ -1815,6 +1869,9 @@ impl<const N: usize> TinyAscii<N> {
     ///
     /// let (mut arr, len) = s.into_parts();
     ///
+    /// assert_eq!(len, 6);
+    /// assert_eq!(arr[6..], [0, 0]);
+    ///
     /// arr[3] = b'B';
     ///
     /// let rebuilt = unsafe { TinyAscii::from_parts(arr, len) };
@@ -1822,35 +1879,35 @@ impl<const N: usize> TinyAscii<N> {
     /// assert_eq!(&rebuilt, "fooBar");
     /// ```
     pub fn into_parts(mut self) -> ([u8; N], usize) {
-        let last_idx = N - 1;
         let len = self.len();
-        let start = len.min(last_idx);
 
-        self.buf[start..last_idx].fill(MaybeUninit::zeroed());
+        // Zero everything past `len`, including the length marker in the last
+        // byte, which is not part of the content.
+        self.buf[len..].fill(MaybeUninit::zeroed());
 
         // TODO: use `array_assume_init` when stable
         (
-            // SAFETY: `self.buf` was initialized from `0..len` and now
-            // it is completely filled.
+            // SAFETY: `self.buf` was initialized from `0..len` and `len..N`
+            // was just zero-filled, so it is completely initialized.
             unsafe { core::mem::transmute_copy::<[MaybeUninit<u8>; N], [u8; N]>(&self.buf) },
             len,
         )
     }
 
-    /// Creates a [`TinyAscii`] directly from a byte array, and length.
+    /// Creates a [`TinyAscii`] directly from a byte array and a length.
     ///
     /// # Safety
     ///
     /// Caller must ensure that:
     ///
-    /// * `length` is less than or equal to `arr.len()`.
-    /// * The first `length` bytes must be valid [`NonNullAscii`] characters.
+    /// * `len` is less than or equal to `N` (the array length).
+    /// * The first `len` bytes are valid [`NonNullAscii`] characters.
     ///
-    /// These requirements are always upheld by any `arr` and `length` pair
+    /// These requirements are always upheld by any `arr` and `len` pair
     /// returned from [`into_parts`]. Other sources are allowed if the invariants
     /// are upheld.
     ///
-    /// Violating these may cause UB when reading the created [`TinyAscii`] content.
+    /// Violating these requirements **will** cause UB.
     ///
     /// [`into_parts`]: TinyAscii::into_parts
     ///

@@ -412,6 +412,57 @@ fn into_parts_roundtrip_max_capacity() {
 }
 
 #[test]
+fn into_parts_zero_fills_bytes_past_len() {
+    // Fresh (partially uninitialized) buffer.
+    let s: TinyAscii8 = TinyAscii8::try_from_str("abc").unwrap();
+    let (arr, len) = s.into_parts();
+    assert_eq!(len, 3);
+    assert_eq!(&arr[..3], b"abc");
+    assert_eq!(&arr[3..], &[0; 5]);
+
+    // Empty string: the whole array is zero, including the length marker.
+    let (arr, len) = TinyAscii8::new().into_parts();
+    assert_eq!(len, 0);
+    assert_eq!(arr, [0; 8]);
+
+    // Capacity of 1.
+    let (arr, len) = TinyAscii::<1>::new().into_parts();
+    assert_eq!((arr, len), ([0], 0));
+
+    // Full string: the last byte is content, not a marker.
+    let s: TinyAscii4 = TinyAscii4::try_from_str("abcd").unwrap();
+    let (arr, len) = s.into_parts();
+    assert_eq!((&arr, len), (b"abcd", 4));
+}
+
+#[test]
+fn into_parts_zero_fills_stale_bytes_after_shrinking() {
+    // Stale bytes left in the buffer by `pop`, `truncate` and `clear`
+    // must not leak into the returned array.
+    let mut s: TinyAscii8 = TinyAscii8::try_from_str("abcdefgh").unwrap();
+    s.pop();
+    s.truncate(5);
+    let (arr, len) = s.clone().into_parts();
+    assert_eq!(len, 5);
+    assert_eq!(&arr[..5], b"abcde");
+    assert_eq!(&arr[5..], &[0; 3]);
+
+    s.clear();
+    let (arr, len) = s.into_parts();
+    assert_eq!((arr, len), ([0; 8], 0));
+}
+
+#[test]
+fn into_parts_zero_fills_max_capacity() {
+    let mut s = TinyAscii128::try_from_str("xyz").unwrap();
+    s.try_push(NonNullAscii::SmallW).unwrap();
+    let (arr, len) = s.into_parts();
+    assert_eq!(len, 4);
+    assert_eq!(&arr[..4], b"xyzw");
+    assert!(arr[4..].iter().all(|&b| b == 0));
+}
+
+#[test]
 fn into_parts_from_parts_modify() {
     let s: TinyAscii8 = TinyAscii8::try_from_str("foo").unwrap();
     let (mut arr, len) = s.into_parts();

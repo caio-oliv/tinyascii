@@ -46,7 +46,7 @@ pub enum Ascii {
     Enquiry = 5,
     /// Acknowledge (control code) `0x06`.
     Acknowledge = 6,
-    /// Bell (control code) `0x06`.
+    /// Bell (control code) `0x07`.
     Bell = 7,
     /// Backspace (control code) `0x08`.
     Backspace = 8,
@@ -126,7 +126,7 @@ pub enum Ascii {
     HyphenMinus = 45,
     /// Period, Dot or Full Stop (`.`).
     FullStop = 46,
-    /// Slash, Devide or Solidus (`/`).
+    /// Slash, Divide or Solidus (`/`).
     Solidus = 47,
     /// Digit Zero (`0`).
     Digit0 = 48,
@@ -224,7 +224,7 @@ pub enum Ascii {
     CircumflexAccent = 94,
     /// Low Line or Underscore (`_`).
     LowLine = 95,
-    /// Grave Accent (`).
+    /// Grave Accent (`` ` ``).
     GraveAccent = 96,
     /// Lowercase A (`a`).
     SmallA = 97,
@@ -286,7 +286,7 @@ pub enum Ascii {
     RightCurlyBracket = 125,
     /// Tilde or Equivalency Sign (`~`).
     Tilde = 126,
-    /// Delete.
+    /// Delete (control code) `0x7F`.
     Delete = 127,
 }
 
@@ -311,7 +311,7 @@ pub enum NonNullAscii {
     Enquiry = 5,
     /// Acknowledge (control code) `0x06`.
     Acknowledge = 6,
-    /// Bell (control code) `0x06`.
+    /// Bell (control code) `0x07`.
     Bell = 7,
     /// Backspace (control code) `0x08`.
     Backspace = 8,
@@ -391,7 +391,7 @@ pub enum NonNullAscii {
     HyphenMinus = 45,
     /// Period, Dot or Full Stop (`.`).
     FullStop = 46,
-    /// Slash, Devide or Solidus (`/`).
+    /// Slash, Divide or Solidus (`/`).
     Solidus = 47,
     /// Digit Zero (`0`).
     Digit0 = 48,
@@ -489,7 +489,7 @@ pub enum NonNullAscii {
     CircumflexAccent = 94,
     /// Low Line or Underscore (`_`).
     LowLine = 95,
-    /// Grave Accent (`).
+    /// Grave Accent (`` ` ``).
     GraveAccent = 96,
     /// Lowercase A (`a`).
     SmallA = 97,
@@ -551,7 +551,7 @@ pub enum NonNullAscii {
     RightCurlyBracket = 125,
     /// Tilde or Equivalency Sign (`~`).
     Tilde = 126,
-    /// Delete.
+    /// Delete (control code) `0x7F`.
     Delete = 127,
 }
 
@@ -576,7 +576,7 @@ impl Ascii {
         b < 128
     }
 
-    /// Creates a [`Ascii`] character from a byte,
+    /// Creates an [`Ascii`] character from a byte,
     /// or returns `None` if it's not ASCII.
     ///
     /// # Examples
@@ -596,7 +596,7 @@ impl Ascii {
         }
     }
 
-    /// Creates a [`Ascii`] character from a [char],
+    /// Creates an [`Ascii`] character from a [char],
     /// or returns `None` if it's not ASCII.
     ///
     /// # Examples
@@ -617,7 +617,7 @@ impl Ascii {
         Some(unsafe { Self::from_u8_unchecked(ch as u8) })
     }
 
-    /// Creates a [`Ascii`] character from a byte, without checking whether it's valid.
+    /// Creates an [`Ascii`] character from a byte, without checking whether it's valid.
     ///
     /// # Safety
     ///
@@ -641,13 +641,12 @@ impl Ascii {
     ///
     /// ```
     /// # use tinyascii::Ascii;
-    /// let ascii = unsafe { Ascii::from_u8_unchecked(65) };
-    /// assert_eq!(ascii.as_str(), "A");
+    /// assert_eq!(Ascii::CapitalA.as_str(), "A");
     /// ```
     pub const fn as_str(&self) -> &str {
         let slice = core::slice::from_ref(self);
         // SAFETY: a `&[Ascii]` has the same
-        // representation of a `&str`
+        // representation as a `&str`
         unsafe { core::mem::transmute::<&[Self], &str>(slice) }
     }
 
@@ -890,8 +889,8 @@ impl NonNullAscii {
         b.wrapping_sub(1) < 127
     }
 
-    /// Creates [`NonNullAscii`] character from a byte,
-    /// or returns `None` if it's too large.
+    /// Creates a [`NonNullAscii`] character from a byte,
+    /// or returns `None` if it's null (`0`) or not ASCII.
     ///
     /// # Examples
     ///
@@ -955,13 +954,12 @@ impl NonNullAscii {
     ///
     /// ```
     /// # use tinyascii::NonNullAscii;
-    /// let ascii = unsafe { NonNullAscii::from_u8_unchecked(65) };
-    /// assert_eq!(ascii.as_str(), "A");
+    /// assert_eq!(NonNullAscii::CapitalA.as_str(), "A");
     /// ```
     pub const fn as_str(&self) -> &str {
         let slice = core::slice::from_ref(self);
         // SAFETY: a `&[NonNullAscii]` has the same
-        // representation of a `&str`
+        // representation as a `&str`
         unsafe { core::mem::transmute::<&[Self], &str>(slice) }
     }
 
@@ -1011,16 +1009,16 @@ impl NonNullAscii {
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::Ascii;
-    /// let uppercase_a = Ascii::CapitalA;
-    /// let uppercase_g = Ascii::CapitalG;
-    /// let a = Ascii::SmallA;
-    /// let g = Ascii::SmallG;
-    /// let zero = Ascii::Digit0;
-    /// let percent = Ascii::PercentSign;
-    /// let space = Ascii::Space;
-    /// let lf = Ascii::LineFeed;
-    /// let esc = Ascii::Escape;
+    /// # use tinyascii::NonNullAscii;
+    /// let uppercase_a = NonNullAscii::CapitalA;
+    /// let uppercase_g = NonNullAscii::CapitalG;
+    /// let a = NonNullAscii::SmallA;
+    /// let g = NonNullAscii::SmallG;
+    /// let zero = NonNullAscii::Digit0;
+    /// let percent = NonNullAscii::PercentSign;
+    /// let space = NonNullAscii::Space;
+    /// let lf = NonNullAscii::LineFeed;
+    /// let esc = NonNullAscii::Escape;
     ///
     /// assert!(uppercase_a.is_alphabetic());
     /// assert!(uppercase_g.is_alphabetic());
@@ -1045,16 +1043,16 @@ impl NonNullAscii {
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::Ascii;
-    /// let uppercase_a = Ascii::CapitalA;
-    /// let uppercase_g = Ascii::CapitalG;
-    /// let a = Ascii::SmallA;
-    /// let g = Ascii::SmallG;
-    /// let zero = Ascii::Digit0;
-    /// let percent = Ascii::PercentSign;
-    /// let space = Ascii::Space;
-    /// let lf = Ascii::LineFeed;
-    /// let esc = Ascii::Escape;
+    /// # use tinyascii::NonNullAscii;
+    /// let uppercase_a = NonNullAscii::CapitalA;
+    /// let uppercase_g = NonNullAscii::CapitalG;
+    /// let a = NonNullAscii::SmallA;
+    /// let g = NonNullAscii::SmallG;
+    /// let zero = NonNullAscii::Digit0;
+    /// let percent = NonNullAscii::PercentSign;
+    /// let space = NonNullAscii::Space;
+    /// let lf = NonNullAscii::LineFeed;
+    /// let esc = NonNullAscii::Escape;
     ///
     /// assert!(uppercase_a.is_alphanumeric());
     /// assert!(uppercase_g.is_alphanumeric());
@@ -1071,23 +1069,23 @@ impl NonNullAscii {
     }
 
     /// Checks if the value is a control character:
-    /// 0x00 NUL ..= 0x1F UNIT SEPARATOR, or 0x7F DELETE.
+    /// 0x01 START OF HEADING ..= 0x1F UNIT SEPARATOR, or 0x7F DELETE.
     /// Note that most whitespace characters are control
     /// characters, but SPACE is not.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::Ascii;
-    /// let uppercase_a = Ascii::CapitalA;
-    /// let uppercase_g = Ascii::CapitalG;
-    /// let a = Ascii::SmallA;
-    /// let g = Ascii::SmallG;
-    /// let zero = Ascii::Digit0;
-    /// let percent = Ascii::PercentSign;
-    /// let space = Ascii::Space;
-    /// let lf = Ascii::LineFeed;
-    /// let esc = Ascii::Escape;
+    /// # use tinyascii::NonNullAscii;
+    /// let uppercase_a = NonNullAscii::CapitalA;
+    /// let uppercase_g = NonNullAscii::CapitalG;
+    /// let a = NonNullAscii::SmallA;
+    /// let g = NonNullAscii::SmallG;
+    /// let zero = NonNullAscii::Digit0;
+    /// let percent = NonNullAscii::PercentSign;
+    /// let space = NonNullAscii::Space;
+    /// let lf = NonNullAscii::LineFeed;
+    /// let esc = NonNullAscii::Escape;
     ///
     /// assert!(!uppercase_a.is_control());
     /// assert!(!uppercase_g.is_control());
@@ -1109,16 +1107,16 @@ impl NonNullAscii {
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::Ascii;
-    /// let uppercase_a = Ascii::CapitalA;
-    /// let uppercase_g = Ascii::CapitalG;
-    /// let a = Ascii::SmallA;
-    /// let g = Ascii::SmallG;
-    /// let zero = Ascii::Digit0;
-    /// let percent = Ascii::PercentSign;
-    /// let space = Ascii::Space;
-    /// let lf = Ascii::LineFeed;
-    /// let esc = Ascii::Escape;
+    /// # use tinyascii::NonNullAscii;
+    /// let uppercase_a = NonNullAscii::CapitalA;
+    /// let uppercase_g = NonNullAscii::CapitalG;
+    /// let a = NonNullAscii::SmallA;
+    /// let g = NonNullAscii::SmallG;
+    /// let zero = NonNullAscii::Digit0;
+    /// let percent = NonNullAscii::PercentSign;
+    /// let space = NonNullAscii::Space;
+    /// let lf = NonNullAscii::LineFeed;
+    /// let esc = NonNullAscii::Escape;
     ///
     /// assert!(!uppercase_a.is_digit());
     /// assert!(!uppercase_g.is_digit());
@@ -1140,16 +1138,16 @@ impl NonNullAscii {
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::Ascii;
-    /// let uppercase_a = Ascii::CapitalA;
-    /// let uppercase_g = Ascii::CapitalG;
-    /// let a = Ascii::SmallA;
-    /// let g = Ascii::SmallG;
-    /// let zero = Ascii::Digit0;
-    /// let percent = Ascii::PercentSign;
-    /// let space = Ascii::Space;
-    /// let lf = Ascii::LineFeed;
-    /// let esc = Ascii::Escape;
+    /// # use tinyascii::NonNullAscii;
+    /// let uppercase_a = NonNullAscii::CapitalA;
+    /// let uppercase_g = NonNullAscii::CapitalG;
+    /// let a = NonNullAscii::SmallA;
+    /// let g = NonNullAscii::SmallG;
+    /// let zero = NonNullAscii::Digit0;
+    /// let percent = NonNullAscii::PercentSign;
+    /// let space = NonNullAscii::Space;
+    /// let lf = NonNullAscii::LineFeed;
+    /// let esc = NonNullAscii::Escape;
     ///
     /// assert!(!uppercase_a.is_lowercase());
     /// assert!(!uppercase_g.is_lowercase());
@@ -1171,16 +1169,16 @@ impl NonNullAscii {
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::Ascii;
-    /// let uppercase_a = Ascii::CapitalA;
-    /// let uppercase_g = Ascii::CapitalG;
-    /// let a = Ascii::SmallA;
-    /// let g = Ascii::SmallG;
-    /// let zero = Ascii::Digit0;
-    /// let percent = Ascii::PercentSign;
-    /// let space = Ascii::Space;
-    /// let lf = Ascii::LineFeed;
-    /// let esc = Ascii::Escape;
+    /// # use tinyascii::NonNullAscii;
+    /// let uppercase_a = NonNullAscii::CapitalA;
+    /// let uppercase_g = NonNullAscii::CapitalG;
+    /// let a = NonNullAscii::SmallA;
+    /// let g = NonNullAscii::SmallG;
+    /// let zero = NonNullAscii::Digit0;
+    /// let percent = NonNullAscii::PercentSign;
+    /// let space = NonNullAscii::Space;
+    /// let lf = NonNullAscii::LineFeed;
+    /// let esc = NonNullAscii::Escape;
     ///
     /// assert!(uppercase_a.is_uppercase());
     /// assert!(uppercase_g.is_uppercase());
