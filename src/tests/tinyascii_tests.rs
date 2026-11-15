@@ -295,6 +295,63 @@ fn from_ascii_array_full() {
     assert!(s.is_full());
 }
 
+#[test]
+fn from_ascii_array_smaller_than_capacity() {
+    let arr = [NonNullAscii::SmallA, NonNullAscii::SmallB];
+    let s: TinyAscii8 = TinyAscii8::from_ascii_array(arr);
+    assert_eq!(&s, "ab");
+    assert_eq!(s.len(), 2);
+    assert!(!s.is_full());
+}
+
+#[test]
+fn from_ascii_array_empty() {
+    let s: TinyAscii8 = TinyAscii8::from_ascii_array([]);
+    assert!(s.is_empty());
+}
+
+// ---------------------------------------------------------------------------
+// try_from_slice
+// ---------------------------------------------------------------------------
+
+#[test]
+fn try_from_slice_basic() {
+    let slice = [NonNullAscii::SmallH, NonNullAscii::SmallI];
+    let s = TinyAscii8::try_from_slice(&slice).unwrap();
+    assert_eq!(&s, "hi");
+    assert_eq!(s.len(), 2);
+}
+
+#[test]
+fn try_from_slice_empty() {
+    let s = TinyAscii8::try_from_slice(&[]).unwrap();
+    assert!(s.is_empty());
+}
+
+#[test]
+fn try_from_slice_exact_capacity() {
+    let slice = [NonNullAscii::SmallA; 4];
+    let s = TinyAscii4::try_from_slice(&slice).unwrap();
+    assert_eq!(&s, "aaaa");
+    assert!(s.is_full());
+}
+
+#[test]
+fn try_from_slice_max_capacity() {
+    let slice = [NonNullAscii::SmallZ; MAX_LEN];
+    let s = TinyAscii128::try_from_slice(&slice).unwrap();
+    assert_eq!(s.as_ascii(), slice.as_slice());
+}
+
+#[test]
+fn try_from_slice_over_capacity() {
+    let slice = [NonNullAscii::SmallA; 5];
+    assert_eq!(
+        TinyAscii4::try_from_slice(&slice),
+        Err(crate::error::CapacityLimitError)
+    );
+}
+
 // ---------------------------------------------------------------------------
 // from_ascii_lossy
 // ---------------------------------------------------------------------------

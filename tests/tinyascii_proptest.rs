@@ -110,6 +110,32 @@ proptest! {
 
 proptest! {
     #[test]
+    fn try_from_slice_valid(
+        bytes in prop::collection::vec(1u8..=127u8, 0..=128),
+    ) {
+        let arr: Vec<NonNullAscii> =
+            bytes.iter().map(|&b| NonNullAscii::from_u8(b).unwrap()).collect();
+
+        let ta = TinyAscii128::try_from_slice(&arr).unwrap();
+
+        prop_assert_eq!(ta.len(), arr.len());
+        prop_assert_eq!(ta.as_ascii(), arr.as_slice());
+        prop_assert_eq!(ta.as_bytes(), bytes.as_slice());
+    }
+
+    #[test]
+    fn try_from_slice_over_capacity(
+        bytes in prop::collection::vec(1u8..=127u8, 9..=128),
+    ) {
+        let arr: Vec<NonNullAscii> =
+            bytes.iter().map(|&b| NonNullAscii::from_u8(b).unwrap()).collect();
+
+        prop_assert_eq!(TinyAscii8::try_from_slice(&arr), Err(CapacityLimitError));
+    }
+}
+
+proptest! {
+    #[test]
     fn try_push_available_capacity(
         mut s in ascii_string(0..=127),
         ascii in non_null_ascii_strategy(),

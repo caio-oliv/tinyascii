@@ -272,21 +272,94 @@ impl<const N: usize> TinyAscii<N> {
         out
     }
 
-    /// Creates a new [`TinyAscii`] from a non-null ASCII array.
+    /// Creates a new [`TinyAscii`] from a slice of non-null ASCII characters.
+    ///
+    /// The slice length must be less than or equal to the capacity (`N`).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CapacityLimitError`] if the slice length is greater than the
+    /// capacity (`N`).
     ///
     /// # Examples
     ///
     /// ```
-    /// # use tinyascii::{TinyAscii, NonNullAscii};
-    /// let arr = [NonNullAscii::SmallY, NonNullAscii::SmallE, NonNullAscii::SmallS];
-    /// let s = TinyAscii::from_ascii_array(arr);
-    /// assert_eq!(&s, "yes");
+    /// # use tinyascii::{TinyAscii16, NonNullAscii};
+    /// let slice = [NonNullAscii::SmallO, NonNullAscii::SmallK];
+    /// let s = TinyAscii16::try_from_slice(&slice).unwrap();
+    /// assert_eq!(&s, "ok");
     /// ```
-    pub fn from_ascii_array(ascii: [NonNullAscii; N]) -> TinyAscii<N> {
+    ///
+    /// Not enough capacity:
+    ///
+    /// ```
+    /// # use tinyascii::{TinyAscii8, NonNullAscii, error::CapacityLimitError};
+    /// let big = [NonNullAscii::SmallA; 20];
+    /// let err = TinyAscii8::try_from_slice(&big).unwrap_err();
+    /// assert_eq!(err, CapacityLimitError);
+    /// ```
+    pub fn try_from_slice(slice: &[NonNullAscii]) -> Result<Self, CapacityLimitError> {
         const { assert_capacity::<N>() }
 
-        Self {
-            buf: ascii.map(|ascii| MaybeUninit::new(ascii.to_u8())),
+        if slice.len() > N {
+            return Err(CapacityLimitError);
+        }
+
+        let mut tiny = Self::new();
+        // SAFETY: `slice.len()` is less than or equal to `N` as verified above.
+        unsafe { tiny.set_len(slice.len()) };
+
+        // SAFETY: `NonNullAscii` is `#[repr(u8)]`, so it has the same size, alignment
+        // and valid bit patterns subset as `u8`; the pointer and length come from a
+        // valid slice.
+        let bytes =
+            unsafe { core::slice::from_raw_parts(slice.as_ptr().cast::<u8>(), slice.len()) };
+
+        // SAFETY:
+        // - `bytes.len()` is less than or equal to `N` (and thus `MAX_LEN`) as verified above
+        // - `tiny.buf.len()` is `N`, greater than or equal to `bytes.len()`
+        unsafe { crate::simd::copy_tinyascii(bytes, &mut tiny.buf) };
+
+        Ok(tiny)
+    }
+
+    /// Creates a new [`TinyAscii`] from a non-null ASCII array.
+    ///
+    /// The array length `M` can be less than or equal to the capacity (`N`).
+    ///
+    /// # Panics
+    ///
+    /// Fails to compile (const panic) if `M` is greater than the capacity (`N`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tinyascii::{TinyAscii8, NonNullAscii};
+    /// let arr = [NonNullAscii::SmallY, NonNullAscii::SmallE, NonNullAscii::SmallS];
+    /// let s = TinyAscii8::from_ascii_array(arr);
+    /// assert_eq!(&s, "yes");
+    /// ```
+    ///
+    /// An array larger than the capacity fails to compile:
+    ///
+    /// ```compile_fail
+    /// # use tinyascii::{TinyAscii4, NonNullAscii};
+    /// let _ = TinyAscii4::from_ascii_array([NonNullAscii::SmallA; 5]);
+    /// ```
+    pub fn from_ascii_array<const M: usize>(arr: [NonNullAscii; M]) -> TinyAscii<N> {
+        const {
+            assert_capacity::<N>();
+            assert!(
+                M <= N,
+                "array length (M) must be less than or equal to TinyAscii capacity (N)"
+            );
+        }
+
+        // `M <= N` is verified at compile time above, so this cannot fail.
+        match Self::try_from_slice(&arr) {
+            Ok(tiny) => tiny,
+            // SAFETY: `M <= N` is enforced by the const block above.
+            Err(_) => unsafe { core::hint::unreachable_unchecked() },
         }
     }
 
