@@ -1,7 +1,15 @@
 [package]
 name = "tinyascii"
-version = "0.1.0"
+description = "Fixed-capacity, inline ASCII strings with no allocation. no_std by default."
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+authors = ["Caio Oliveira <caio.vsoliveira23@gmail.com>"]
+repository = "https://github.com/caio-oliv/tinyascii"
+categories = ["embedded", "encoding", "no-std", "no-std::no-alloc"]
+keywords = ["ascii", "stack"]
 edition = "2024"
+rust-version = "1.96"
+version = "0.1.0"
 
 [features]
 default = []

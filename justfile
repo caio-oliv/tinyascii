@@ -8,6 +8,13 @@ set default-list
     cargo build --features dep_ascii
     cargo build --all-features
 
+@check-all:
+    @just build-matrix
+    @just lint
+    @just test
+    @just test-miri
+    @just doc
+
 [group('doc')]
 @doc:
     cargo doc --all-features
