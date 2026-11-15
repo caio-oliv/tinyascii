@@ -1817,21 +1817,11 @@ impl<const N: usize> TinyAscii<N> {
     /// `start <= end <= N`.
     #[inline]
     unsafe fn fill_range(&mut self, start: usize, end: usize, value: NonNullAscii) {
-        // `0` is not a valid `NonNullAscii`, so every byte is replaced by `value`.
-        const INVALID: [u8; MAX_LEN] = [0; MAX_LEN];
-
         // SAFETY: `start <= end <= N <= MAX_LEN`, as ensured by the caller.
-        let (src, dst) = unsafe {
-            (
-                INVALID.get_unchecked(..end - start),
-                self.buf.get_unchecked_mut(start..end),
-            )
-        };
+        let dst = unsafe { self.buf.get_unchecked_mut(start..end) };
 
-        // SAFETY:
-        // - `src.len() <= MAX_LEN`
-        // - `dst.len() == src.len()`
-        unsafe { crate::simd::fill_ascii(src, dst, value) };
+        // SAFETY: `dst.len() <= MAX_LEN`
+        unsafe { crate::simd::fill_value(dst, value) };
     }
 
     /// Resizes this [`TinyAscii`] in place so that its length is equal to `new_len`.

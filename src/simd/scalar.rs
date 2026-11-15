@@ -103,3 +103,20 @@ pub(super) unsafe fn fill_ascii(
         }
     }
 }
+
+/// Scalar version of [`crate::simd::fill_value`].
+///
+/// # Safety
+///
+/// Same safety requirements as [`crate::simd::fill_value`].
+#[inline(always)]
+pub(super) unsafe fn fill_value(dst: &mut [MaybeUninit<u8>], value: NonNullAscii) {
+    // SAFETY: `dst` length is less or equal than `MAX_LEN` as ensured
+    // by the caller.
+    unsafe { core::hint::assert_unchecked(MAX_LEN >= dst.len()) };
+
+    let val = value.to_u8();
+    for slot in dst {
+        slot.write(val);
+    }
+}

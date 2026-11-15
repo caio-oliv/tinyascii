@@ -441,3 +441,76 @@ const fn fill_u32(x: u32, repl: u8) -> u32 {
     let mask = (valid >> 7) * 0xff;
     (x & mask) | ((repl as u32).wrapping_mul(LOW) & !mask)
 }
+
+/// AVX2 version of [`crate::simd::fill_value`].
+///
+/// # Safety
+///
+/// Same safety requirements as [`crate::simd::fill_value`].
+#[inline]
+#[target_feature(enable = "avx2")]
+pub(super) unsafe fn fill_value(dst: &mut [MaybeUninit<u8>], value: NonNullAscii) {
+    #![allow(clippy::undocumented_unsafe_blocks)]
+
+    // SAFETY: `dst` length is less or equal than `MAX_LEN` as ensured
+    // by the caller.
+    unsafe { core::hint::assert_unchecked(MAX_LEN >= dst.len()) };
+
+    let len = dst.len();
+    let d = dst.as_mut_ptr();
+    let val = value.to_u8();
+
+    if len > 64 {
+        let v = _mm256_set1_epi8(val as i8);
+        unsafe { _mm256_storeu_si256(d.cast(), v) };
+        unsafe { _mm256_storeu_si256(d.add(32).cast(), v) };
+        unsafe { _mm256_storeu_si256(d.add(len - 64).cast(), v) };
+        unsafe { _mm256_storeu_si256(d.add(len - 32).cast(), v) };
+
+        return;
+    }
+
+    if len >= 32 {
+        let v = _mm256_set1_epi8(val as i8);
+        unsafe { _mm256_storeu_si256(d.cast(), v) };
+        unsafe { _mm256_storeu_si256(d.add(len - 32).cast(), v) };
+
+        return;
+    }
+
+    if len >= 16 {
+        let v = _mm_set1_epi8(val as i8);
+        unsafe { _mm_storeu_si128(d.cast(), v) };
+        unsafe { _mm_storeu_si128(d.add(len - 16).cast(), v) };
+
+        return;
+    }
+
+    if len >= 8 {
+        let v = u64::from(val) * 0x0101_0101_0101_0101;
+        unsafe { d.cast::<u64>().write_unaligned(v) };
+        unsafe { d.add(len - 8).cast::<u64>().write_unaligned(v) };
+
+        return;
+    }
+
+    if len >= 4 {
+        let v = u32::from(val) * 0x0101_0101;
+        unsafe { d.cast::<u32>().write_unaligned(v) };
+        unsafe { d.add(len - 4).cast::<u32>().write_unaligned(v) };
+
+        return;
+    }
+
+    if len >= 2 {
+        let v = u16::from(val) * 0x0101;
+        unsafe { d.cast::<u16>().write_unaligned(v) };
+        unsafe { d.add(len - 2).cast::<u16>().write_unaligned(v) };
+
+        return;
+    }
+
+    if len == 1 {
+        unsafe { d.cast::<u8>().write(val) };
+    }
+}

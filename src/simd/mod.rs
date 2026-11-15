@@ -100,3 +100,26 @@ pub unsafe fn fill_ascii(src: &[u8], dst: &mut [MaybeUninit<u8>], replacement: N
         }
     }
 }
+
+/// Fill `dst` with `value`.
+///
+/// # Safety
+///
+/// `dst.len()` must be less than or equal 128 (`MAX_LEN`).
+///
+/// Failing to uphold those invariants will cause a write out of bounds.
+#[inline]
+pub unsafe fn fill_value(dst: &mut [MaybeUninit<u8>], value: NonNullAscii) {
+    cfg_select! {
+        target_feature = "avx2" => {
+            // SAFETY:
+            // 1. AVX2 version has same safety requirements as `self::fill_value`
+            // 2. `fill_value` requires target_feature avx2 enabled
+            unsafe { avx2::fill_value(dst, value) }
+        }
+        _ => {
+            // SAFETY: scalar version has same safety requirements as `self::fill_value`
+            unsafe { scalar::fill_value(dst, value) }
+        }
+    }
+}
